@@ -1,0 +1,5 @@
+الخطوة الحالية فقط:
+1. فك ضغط alpha-core-mvp-v1.zip.
+2. لا تعدل أي ملف.
+3. ارجع إلى Repository اسمه alpha-core على GitHub.
+4. اتبع تعليمات ChatGPT لرفع الملفات.
