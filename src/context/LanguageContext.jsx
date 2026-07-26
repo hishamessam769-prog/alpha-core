@@ -1,0 +1,151 @@
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+
+const LanguageContext = createContext(null);
+
+const copy = {
+  en: {
+    navHome: "Home", navMethodology: "Methodology", navDashboard: "Dashboard", navProfile: "Profile",
+    login: "Log in", signup: "Join free", logout: "Sign out", admin: "Admin",
+    heroEyebrow: "INDEPENDENT EGYPTIAN EQUITY INTELLIGENCE",
+    heroTitle1: "A transparent record of", heroTitle2: "decisions, performance", heroTitle3: "and real Alpha.",
+    heroText: "ALPHA CORE documents a focused Egyptian equity strategy against EGX30 Capped. Every monthly result, portfolio change and investment decision remains visible.",
+    heroPrimary: "Join ALPHA CORE free", heroSecondary: "Explore the methodology",
+    trust1: "Real monthly track record", trust2: "Benchmark comparison", trust3: "Permanent decision history",
+    liveSection: "SEE THE PRODUCT BEFORE YOU JOIN", liveTitle: "Built like an investment terminal, explained like a monthly letter.",
+    liveText: "Members see the live portfolio, cumulative performance, benchmark comparison, monthly Alpha, decision log and investor guidance in one place.",
+    portfolioMtd: "Portfolio MTD", benchmarkMtd: "EGX30 Capped MTD", monthlyAlpha: "Monthly Alpha",
+    cumulativePortfolio: "Cumulative Portfolio", cumulativeBenchmark: "Cumulative Benchmark", cumulativeAlpha: "Cumulative Alpha",
+    sampleData: "Illustrative preview",
+    whyEyebrow: "WHY ALPHA CORE", whyTitle: "No hidden edits. No selective memory.",
+    whyText: "A strategy should be judged by the complete record, not by isolated winning calls.",
+    why1Title: "One official portfolio", why1Text: "A published monthly allocation with visible weights, entry prices and contributions.",
+    why2Title: "One benchmark", why2Text: "Performance is measured against EGX30 Capped every month and since launch.",
+    why3Title: "Every decision logged", why3Text: "Changes remain attached to the month with the reason they were made.",
+    why4Title: "Compounded history", why4Text: "Monthly returns are compounded into portfolio, benchmark and Alpha since launch.",
+    journeyEyebrow: "MEMBER JOURNEY", journeyTitle: "From first visit to full transparency.",
+    journey1: "Understand the strategy", journey2: "Create a free account", journey3: "Enter the member terminal", journey4: "Follow every published update",
+    faqEyebrow: "FAQ", faqTitle: "Clear before you join.",
+    faq1q: "Is ALPHA CORE a personalised advisory service?", faq1a: "No. The platform presents strategy performance and educational investment research. It does not provide personalised financial advice.",
+    faq2q: "How often is performance updated?", faq2a: "The live month can be updated during the month. The chart keeps one clean point per month, while the latest figures always reflect the newest published update.",
+    faq3q: "Can old results be removed?", faq3a: "Closed months remain in the permanent track record so the strategy can be evaluated across complete market cycles.",
+    ctaTitle: "See the complete strategy record.", ctaText: "Create a free account and enter the ALPHA CORE member terminal.",
+    footer: "Performance is shown for transparency and education. It is not personalised investment advice.",
+    methodologyEyebrow: "THE ALPHA CORE PROCESS", methodologyTitle: "Discipline before prediction.",
+    methodologyText: "The system separates portfolio construction, measurement and public reporting so every result can be audited month by month.",
+    method1Title: "Define the universe", method1Text: "Select liquid Egyptian equities that meet the strategy's quality, valuation and catalyst requirements.",
+    method2Title: "Build the portfolio", method2Text: "Publish the official allocation, weights and opening prices before performance is measured.",
+    method3Title: "Measure consistently", method3Text: "Calculate weighted portfolio return and compare it with EGX30 Capped using the same monthly window.",
+    method4Title: "Compound the record", method4Text: "Link every monthly result to calculate portfolio, benchmark and Alpha since launch.",
+    method5Title: "Record changes", method5Text: "Document every removal, addition and the real reason behind the decision.",
+    method6Title: "Close the month", method6Text: "Freeze the final figures so the historical record cannot silently change later.",
+    formulaPortfolio: "Weighted portfolio return", formulaBenchmark: "EGX30 Capped return", formulaAlpha: "Portfolio − Benchmark", formulaCumulative: "Monthly returns compounded",
+    authWelcome: "Your investment record, in one place.", authText: "Enter the member terminal to view the live portfolio, cumulative performance and every published decision.",
+    email: "Email", password: "Password", fullName: "Full name", newsletter: "Send me ALPHA CORE updates by email",
+    createAccount: "Create account", alreadyMember: "Already have an account?", newMember: "New to ALPHA CORE?",
+    checkEmail: "Check your email", confirmationSent: "We sent a confirmation link. Open it, then log in to the member terminal.",
+    loading: "Loading…", dashboardEyebrow: "MEMBER PERFORMANCE TERMINAL", dashboardSubtitle: "Live portfolio performance versus EGX30 Capped.",
+    lastUpdated: "Last updated", status: "Status", live: "LIVE", final: "FINAL", draft: "DRAFT",
+    refresh: "Refresh", exportPdf: "Export PDF", performanceOverview: "Performance overview", performanceOverviewText: "One point per published month, including the live month.",
+    officialPortfolio: "Official portfolio", officialPortfolioText: "Published positions and contribution to current return.",
+    ticker: "Ticker", weight: "Weight", open: "Open", latest: "Latest", return: "Return", contribution: "Contribution",
+    trackRecord: "Transparent track record", trackRecordText: "Every published month remains in permanent history.",
+    month: "Month", portfolio: "Portfolio", benchmark: "Benchmark", alpha: "Alpha", cumulative: "Cumulative",
+    monthlyUpdate: "Monthly update", objective: "Monthly objective", decisionLog: "Decision log", noChanges: "No stock changes were recorded for this month.",
+    investorGuidance: "Current investor guidance", allocation: "Published allocation",
+    firstReport: "The first report is being prepared.", firstReportText: "You will see the launch month as soon as the administrator publishes it.",
+    recentUpdates: "Recent updates", recentUpdatesText: "The latest published months and their status.",
+    all: "ALL", threeMonths: "3M", sixMonths: "6M", oneYear: "1Y",
+    profileTitle: "Profile settings", profileText: "Update your display name and preferred language.", save: "Save changes", saved: "Changes saved.",
+    adminCentre: "ADMIN CONTROL CENTRE", adminText: "Enter the figures once, then publish them to every registered member.",
+    newMonth: "New month", saveDraft: "Save draft", publishUpdate: "Publish update", closeMonth: "Close month", registeredUsers: "Registered users", newsletterOptIns: "Newsletter opt-ins",
+    monthSetup: "Month setup", strategyName: "Strategy name", benchmarkOpen: "Benchmark open", benchmarkLatest: "Benchmark latest", updateTitle: "Update title",
+    publicCommentary: "Public commentary", monthlyObjective: "Monthly objective", guidanceTitle: "Guidance title", guidance: "Investor guidance",
+    equalise: "Equalise weights", addChange: "Add change", members: "Members", joined: "Joined",
+    removed: "Removed", added: "Added", reason: "Reason for change", viewMember: "View member dashboard",
+  },
+  ar: {
+    navHome: "الرئيسية", navMethodology: "المنهجية", navDashboard: "لوحة الأداء", navProfile: "الحساب",
+    login: "تسجيل الدخول", signup: "اشترك مجانًا", logout: "تسجيل الخروج", admin: "الإدارة",
+    heroEyebrow: "منصة مستقلة لمتابعة استراتيجية الأسهم المصرية",
+    heroTitle1: "سجل شفاف", heroTitle2: "للقرارات والأداء", heroTitle3: "والألفا الحقيقية",
+    heroText: "توثق ALPHA CORE استراتيجية مركزة في الأسهم المصرية مقارنة بمؤشر EGX30 Capped مع حفظ نتائج كل شهر وتغييرات المحفظة وأسباب القرارات.",
+    heroPrimary: "اشترك في ALPHA CORE مجانًا", heroSecondary: "اعرف المنهجية",
+    trust1: "سجل شهري حقيقي", trust2: "مقارنة بالمؤشر", trust3: "تاريخ دائم للقرارات",
+    liveSection: "شاهد المنتج قبل التسجيل", liveTitle: "تجربة تشبه منصة استثمار احترافية وشرح واضح مثل التقرير الشهري.",
+    liveText: "يشاهد الأعضاء المحفظة الحالية والأداء التراكمي والمقارنة بالمؤشر والألفا الشهرية وسجل القرارات وتوجيهات المستثمر في مكان واحد.",
+    portfolioMtd: "أداء المحفظة هذا الشهر", benchmarkMtd: "أداء EGX30 Capped", monthlyAlpha: "الألفا الشهرية",
+    cumulativePortfolio: "أداء المحفظة التراكمي", cumulativeBenchmark: "أداء المؤشر التراكمي", cumulativeAlpha: "الألفا التراكمية",
+    sampleData: "عرض توضيحي",
+    whyEyebrow: "لماذا ALPHA CORE", whyTitle: "لا تعديلات مخفية ولا تذكر انتقائي للنتائج.",
+    whyText: "الاستراتيجية تتقيم بالسجل الكامل وليس بمجموعة توصيات ناجحة تم اختيارها بعد حدوثها.",
+    why1Title: "محفظة رسمية واحدة", why1Text: "توزيع شهري منشور بالأوزان وأسعار البداية ومساهمة كل سهم.",
+    why2Title: "مؤشر واحد واضح", why2Text: "مقارنة شهرية وتراكمية مع EGX30 Capped منذ الإطلاق.",
+    why3Title: "كل قرار مسجل", why3Text: "أي إضافة أو خروج تظل مرتبطة بالشهر وسبب القرار الحقيقي.",
+    why4Title: "سجل تراكمي", why4Text: "يتم تركيب العوائد الشهرية لحساب أداء المحفظة والمؤشر والألفا منذ الإطلاق.",
+    journeyEyebrow: "رحلة المستخدم", journeyTitle: "من أول زيارة إلى شفافية كاملة.",
+    journey1: "يفهم الاستراتيجية", journey2: "ينشئ حسابًا مجانيًا", journey3: "يدخل لوحة الأعضاء", journey4: "يتابع كل تحديث منشور",
+    faqEyebrow: "أسئلة شائعة", faqTitle: "كل شيء واضح قبل الاشتراك.",
+    faq1q: "هل ALPHA CORE خدمة استشارات شخصية؟", faq1a: "لا. المنصة تعرض أداء استراتيجية ومحتوى استثماري تعليمي ولا تقدم نصيحة مالية شخصية.",
+    faq2q: "كم مرة يتم تحديث الأداء؟", faq2a: "يمكن تحديث الشهر الحالي أثناء الشهر. الجراف يحتفظ بنقطة واحدة فقط لكل شهر بينما تعرض الأرقام آخر تحديث منشور.",
+    faq3q: "هل يمكن حذف النتائج القديمة؟", faq3a: "الشهور المقفلة تظل في السجل الدائم حتى يمكن تقييم الاستراتيجية عبر فترات السوق المختلفة.",
+    ctaTitle: "شاهد السجل الكامل للاستراتيجية.", ctaText: "أنشئ حسابًا مجانيًا وادخل لوحة أعضاء ALPHA CORE.",
+    footer: "الأداء معروض للشفافية والتعليم وليس نصيحة استثمارية شخصية.",
+    methodologyEyebrow: "منهجية ALPHA CORE", methodologyTitle: "الانضباط قبل التوقع.",
+    methodologyText: "يفصل النظام بين بناء المحفظة وقياس الأداء والنشر حتى يمكن مراجعة كل نتيجة شهرًا بعد شهر.",
+    method1Title: "تحديد الأسهم المتاحة", method1Text: "اختيار أسهم مصرية ذات سيولة وتحقق معايير الجودة والتقييم والمحفزات.",
+    method2Title: "بناء المحفظة", method2Text: "نشر التوزيع الرسمي والأوزان وأسعار البداية قبل قياس الأداء.",
+    method3Title: "قياس ثابت", method3Text: "حساب العائد المرجح ومقارنته بـ EGX30 Capped خلال نفس الفترة الشهرية.",
+    method4Title: "تركيب العوائد", method4Text: "ربط نتيجة كل شهر لحساب المحفظة والمؤشر والألفا منذ الإطلاق.",
+    method5Title: "تسجيل التغييرات", method5Text: "توثيق كل سهم خرج أو دخل والسبب الحقيقي للقرار.",
+    method6Title: "إغلاق الشهر", method6Text: "تثبيت النتائج النهائية حتى لا يتغير السجل التاريخي لاحقًا.",
+    formulaPortfolio: "العائد المرجح للمحفظة", formulaBenchmark: "عائد EGX30 Capped", formulaAlpha: "المحفظة − المؤشر", formulaCumulative: "تركيب العوائد الشهرية",
+    authWelcome: "سجل استثمارك في مكان واحد.", authText: "ادخل لوحة الأعضاء لمشاهدة المحفظة والأداء التراكمي وكل قرار منشور.",
+    email: "البريد الإلكتروني", password: "كلمة المرور", fullName: "الاسم بالكامل", newsletter: "أرسل لي تحديثات ALPHA CORE على البريد",
+    createAccount: "إنشاء الحساب", alreadyMember: "عندك حساب بالفعل؟", newMember: "جديد في ALPHA CORE؟",
+    checkEmail: "راجع بريدك الإلكتروني", confirmationSent: "أرسلنا رابط تأكيد. افتحه ثم سجل الدخول إلى لوحة الأعضاء.",
+    loading: "جاري التحميل…", dashboardEyebrow: "لوحة أداء الأعضاء", dashboardSubtitle: "أداء المحفظة مقارنة بمؤشر EGX30 Capped.",
+    lastUpdated: "آخر تحديث", status: "الحالة", live: "مباشر", final: "مغلق", draft: "مسودة",
+    refresh: "تحديث", exportPdf: "تصدير PDF", performanceOverview: "ملخص الأداء", performanceOverviewText: "نقطة واحدة لكل شهر منشور بما فيها الشهر الحالي.",
+    officialPortfolio: "المحفظة الرسمية", officialPortfolioText: "الأسهم المنشورة ومساهمة كل سهم في العائد الحالي.",
+    ticker: "السهم", weight: "الوزن", open: "البداية", latest: "الحالي", return: "العائد", contribution: "المساهمة",
+    trackRecord: "سجل الأداء الشفاف", trackRecordText: "كل شهر منشور يظل محفوظًا في التاريخ.",
+    month: "الشهر", portfolio: "المحفظة", benchmark: "المؤشر", alpha: "الألفا", cumulative: "تراكمي",
+    monthlyUpdate: "تحديث الشهر", objective: "هدف الشهر", decisionLog: "سجل القرارات", noChanges: "لم يتم تسجيل تغييرات على الأسهم خلال هذا الشهر.",
+    investorGuidance: "توجيه المستثمر الحالي", allocation: "التوزيع المنشور",
+    firstReport: "يتم تجهيز أول تقرير.", firstReportText: "سيظهر شهر الإطلاق فور نشره من لوحة الإدارة.",
+    recentUpdates: "آخر التحديثات", recentUpdatesText: "أحدث الشهور المنشورة وحالة كل شهر.",
+    all: "الكل", threeMonths: "3 شهور", sixMonths: "6 شهور", oneYear: "سنة",
+    profileTitle: "إعدادات الحساب", profileText: "عدل الاسم الظاهر واللغة المفضلة.", save: "حفظ التعديلات", saved: "تم حفظ التعديلات.",
+    adminCentre: "لوحة تحكم الإدارة", adminText: "اكتب الأرقام مرة واحدة ثم انشرها لكل الأعضاء.",
+    newMonth: "شهر جديد", saveDraft: "حفظ مسودة", publishUpdate: "نشر التحديث", closeMonth: "إغلاق الشهر", registeredUsers: "المستخدمون", newsletterOptIns: "مشتركو البريد",
+    monthSetup: "إعداد الشهر", strategyName: "اسم الاستراتيجية", benchmarkOpen: "بداية المؤشر", benchmarkLatest: "المؤشر الحالي", updateTitle: "عنوان التحديث",
+    publicCommentary: "التعليق المنشور", monthlyObjective: "هدف الشهر", guidanceTitle: "عنوان التوجيه", guidance: "توجيه المستثمر",
+    equalise: "توزيع الأوزان بالتساوي", addChange: "إضافة تغيير", members: "الأعضاء", joined: "تاريخ الانضمام",
+    removed: "السهم الخارج", added: "السهم الداخل", reason: "سبب التغيير", viewMember: "عرض لوحة الأعضاء",
+  },
+};
+
+export function LanguageProvider({ children }) {
+  const [language, setLanguage] = useState(() => localStorage.getItem("alpha-core-language") || "en");
+
+  useEffect(() => {
+    localStorage.setItem("alpha-core-language", language);
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+  }, [language]);
+
+  const value = useMemo(() => ({
+    language,
+    setLanguage,
+    isArabic: language === "ar",
+    t: (key) => copy[language]?.[key] ?? copy.en[key] ?? key,
+  }), [language]);
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+}
+
+export function useLanguage() {
+  const context = useContext(LanguageContext);
+  if (!context) throw new Error("useLanguage must be used inside LanguageProvider");
+  return context;
+}

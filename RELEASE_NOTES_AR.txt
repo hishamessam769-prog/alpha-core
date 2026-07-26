@@ -1,0 +1,24 @@
+ALPHA CORE V2.1 READY
+
+هذا تحديث كامل فوق النسخة الحالية ويستخدم نفس Supabase ونفس المستخدمين ونفس البيانات.
+
+الجديد:
+- تصميم Landing Page أفضل.
+- تحسين Customer Journey قبل التسجيل.
+- عربي وإنجليزي بزر واحد.
+- 6 مؤشرات أداء في Dashboard.
+- Cumulative Portfolio منذ الإطلاق.
+- Cumulative Benchmark منذ الإطلاق.
+- Cumulative Alpha.
+- تركيب العوائد الشهرية حسابيًا.
+- الجراف يعرض نقطة واحدة لكل شهر منشور.
+- 3M / 6M / 1Y / ALL.
+- Last Updated وحالة LIVE أو FINAL.
+- Track Record كامل.
+- صفحة Profile.
+- PDF متعدد الصفحات.
+- تحسين Admin Dashboard مع الحفاظ على نفس طريقة العمل.
+
+لا تشغل SQL جديد.
+لا تغير مفاتيح Vercel.
+ارفع محتويات المجلد إلى نفس GitHub Repository واستبدل الملفات القديمة.

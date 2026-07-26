@@ -1,103 +1,76 @@
 import { useState } from "react";
-import { Link, Navigate } from "react-router-dom";
-import { CheckCircle2 } from "lucide-react";
+import { BarChart3, CheckCircle2, LineChart, MailCheck, ShieldCheck } from "lucide-react";
+import { Link } from "react-router-dom";
 import Brand from "../components/Brand";
-import SetupNotice from "../components/SetupNotice";
-import { supabase } from "../lib/supabase";
-import { useAuth } from "../context/AuthContext";
+import LanguageToggle from "../components/LanguageToggle";
+import { useLanguage } from "../context/LanguageContext";
+import { isSupabaseConfigured, supabase } from "../lib/supabase";
 
 export default function Signup() {
-  const { session } = useAuth();
-  const [form, setForm] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    newsletter: true,
-  });
+  const { t } = useLanguage();
+  const [form, setForm] = useState({ fullName: "", email: "", password: "", newsletter: true });
   const [message, setMessage] = useState("");
-  const [created, setCreated] = useState(false);
-
-  if (session) return <Navigate to="/dashboard" replace />;
+  const [complete, setComplete] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const submit = async (event) => {
     event.preventDefault();
-    setMessage("Creating your free account…");
-
+    if (!isSupabaseConfigured || !supabase) return setMessage("Supabase is not configured.");
+    setSubmitting(true);
+    setMessage("");
     const { error } = await supabase.auth.signUp({
-      email: form.email,
+      email: form.email.trim(),
       password: form.password,
       options: {
-        data: {
-          full_name: form.fullName,
-          newsletter_opt_in: form.newsletter,
-        },
+        emailRedirectTo: `${window.location.origin}/login`,
+        data: { full_name: form.fullName.trim(), newsletter_opt_in: form.newsletter },
       },
     });
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    setCreated(true);
-    setMessage("");
+    if (error) setMessage(error.message);
+    else setComplete(true);
+    setSubmitting(false);
   };
 
   return (
-    <div className="auth-page">
-      <SetupNotice />
-      <div className="auth-shell">
-        <div className="auth-story">
-          <Brand />
-          <span className="eyebrow">FOUNDING MEMBER ACCESS</span>
-          <h1>Follow the track record from month one.</h1>
-          <p>
-            Your free account unlocks the full portfolio, monthly history,
-            decision log and downloadable reports.
-          </p>
-          <ul>
-            <li><CheckCircle2/> Full performance dashboard</li>
-            <li><CheckCircle2/> Monthly ALPHA CORE newsletter</li>
-            <li><CheckCircle2/> Transparent stock-swap history</li>
-          </ul>
-        </div>
-
-        <div className="auth-card">
-          {created ? (
-            <div className="success-state">
-              <CheckCircle2 size={42}/>
-              <h2>Account created</h2>
-              <p>Check your email for the confirmation link, then return to log in.</p>
-              <Link className="button gold full" to="/login">Go to Login</Link>
+    <div className="auth-page-v21">
+      <div className="auth-shell-v21">
+        <section className="auth-story-v21">
+          <div className="auth-story-top"><Brand/><LanguageToggle compact/></div>
+          <div>
+            <span className="eyebrow">ALPHA CORE MEMBER TERMINAL</span>
+            <h1>{t("authWelcome")}</h1>
+            <p>{t("authText")}</p>
+            <div className="auth-benefits">
+              <span><LineChart/>{t("cumulativePortfolio")}</span>
+              <span><BarChart3/>{t("officialPortfolio")}</span>
+              <span><ShieldCheck/>{t("trackRecord")}</span>
+            </div>
+          </div>
+          <small>ALPHA CORE V2.1</small>
+        </section>
+        <section className="auth-card-v21">
+          {complete ? (
+            <div className="success-state-v21">
+              <MailCheck size={52}/><span className="eyebrow">ALPHA CORE</span><h2>{t("checkEmail")}</h2><p>{t("confirmationSent")}</p><Link className="button gold large full" to="/login">{t("login")}</Link>
             </div>
           ) : (
             <>
-              <h2>Create Free Account</h2>
-              <p>No payment details. Founding access is currently free.</p>
+              <span className="eyebrow">{t("signup")}</span>
+              <h2>{t("createAccount")}</h2>
+              <p>{t("ctaText")}</p>
               <form onSubmit={submit}>
-                <label>
-                  Full Name
-                  <input required value={form.fullName} onChange={(e) => setForm({...form, fullName:e.target.value})} placeholder="Your name"/>
-                </label>
-                <label>
-                  Email
-                  <input required type="email" value={form.email} onChange={(e) => setForm({...form, email:e.target.value})} placeholder="name@email.com"/>
-                </label>
-                <label>
-                  Password
-                  <input required minLength="8" type="password" value={form.password} onChange={(e) => setForm({...form, password:e.target.value})} placeholder="Minimum 8 characters"/>
-                </label>
-                <label className="check-label">
-                  <input type="checkbox" checked={form.newsletter} onChange={(e) => setForm({...form, newsletter:e.target.checked})}/>
-                  <span>Send me the monthly ALPHA CORE newsletter and important strategy updates.</span>
-                </label>
-                <button className="button gold full" type="submit">Join ALPHA CORE Free</button>
+                <label>{t("fullName")}<input autoComplete="name" required value={form.fullName} onChange={(e) => setForm({...form, fullName: e.target.value})}/></label>
+                <label>{t("email")}<input autoComplete="email" type="email" required value={form.email} onChange={(e) => setForm({...form, email: e.target.value})}/></label>
+                <label>{t("password")}<input autoComplete="new-password" type="password" minLength="6" required value={form.password} onChange={(e) => setForm({...form, password: e.target.value})}/></label>
+                <label className="check-label-v21"><input type="checkbox" checked={form.newsletter} onChange={(e) => setForm({...form, newsletter: e.target.checked})}/><span>{t("newsletter")}</span></label>
+                <button className="button gold large full" disabled={submitting}>{submitting ? t("loading") : t("createAccount")}</button>
               </form>
               {message && <div className="form-message">{message}</div>}
-              <p className="auth-switch">Already registered? <Link to="/login">Log in</Link></p>
+              <p className="auth-switch">{t("alreadyMember")} <Link to="/login">{t("login")}</Link></p>
+              <Link className="back-home" to="/"><CheckCircle2 size={14}/> ALPHA CORE</Link>
             </>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

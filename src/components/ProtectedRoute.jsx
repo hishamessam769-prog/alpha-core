@@ -1,13 +1,16 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function ProtectedRoute({ children, adminOnly = false }) {
-  const { session, profile, isAdmin } = useAuth();
+  const { session, profile, loading, profileLoaded } = useAuth();
+  const { t } = useLanguage();
+  const location = useLocation();
 
-  if (session === undefined || (session && profile === null)) {
-    return <div className="screen-loader">Loading secure access…</div>;
+  if (loading || (session && !profileLoaded)) {
+    return <div className="screen-loader"><div className="loader-ring"/><p>{t("loading")}</p></div>;
   }
-  if (!session) return <Navigate to="/login" replace />;
-  if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />;
+  if (!session) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (adminOnly && !profile?.is_admin) return <Navigate to="/dashboard" replace />;
   return children;
 }

@@ -1,28 +1,29 @@
 import { Link, NavLink } from "react-router-dom";
-import { LogIn, UserPlus } from "lucide-react";
 import Brand from "./Brand";
+import LanguageToggle from "./LanguageToggle";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function PublicHeader() {
-  const { session, isAdmin } = useAuth();
+  const { session, profile } = useAuth();
+  const { t } = useLanguage();
+  const destination = profile?.is_admin ? "/admin" : "/dashboard";
 
   return (
     <header className="public-header">
       <Brand />
       <nav className="public-nav">
-        <NavLink to="/">Home</NavLink>
-        <NavLink to="/methodology">Methodology</NavLink>
-        {session && <NavLink to="/dashboard">Dashboard</NavLink>}
+        <NavLink to="/" end>{t("navHome")}</NavLink>
+        <NavLink to="/methodology">{t("navMethodology")}</NavLink>
       </nav>
       <div className="header-actions">
+        <LanguageToggle compact />
         {session ? (
-          <Link className="button gold" to={isAdmin ? "/admin" : "/dashboard"}>
-            Open {isAdmin ? "Admin" : "Dashboard"}
-          </Link>
+          <Link className="button gold" to={destination}>{profile?.is_admin ? t("admin") : t("navDashboard")}</Link>
         ) : (
           <>
-            <Link className="button subtle" to="/login"><LogIn size={15}/> Login</Link>
-            <Link className="button gold" to="/signup"><UserPlus size={15}/> Join Free</Link>
+            <Link className="button subtle desktop-action" to="/login">{t("login")}</Link>
+            <Link className="button gold" to="/signup">{t("signup")}</Link>
           </>
         )}
       </div>

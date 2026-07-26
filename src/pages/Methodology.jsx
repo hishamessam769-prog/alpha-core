@@ -1,78 +1,68 @@
+import { ArrowRight, BarChart3, CheckCircle2, Layers3, LockKeyhole, RefreshCcw, Search, Target } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
 import PublicHeader from "../components/PublicHeader";
+import { useLanguage } from "../context/LanguageContext";
 
 export default function Methodology() {
+  const { t, isArabic } = useLanguage();
+  const methods = [
+    [<Search/>, "01", t("method1Title"), t("method1Text")],
+    [<Layers3/>, "02", t("method2Title"), t("method2Text")],
+    [<BarChart3/>, "03", t("method3Title"), t("method3Text")],
+    [<RefreshCcw/>, "04", t("method4Title"), t("method4Text")],
+    [<Target/>, "05", t("method5Title"), t("method5Text")],
+    [<LockKeyhole/>, "06", t("method6Title"), t("method6Text")],
+  ];
   return (
     <div className="public-page">
       <PublicHeader />
-      <main className="methodology-page">
-        <header className="methodology-hero">
-          <span className="eyebrow">INVESTMENT METHODOLOGY</span>
-          <h1>A process that can be measured, challenged and improved.</h1>
-          <p>
-            ALPHA CORE does not promise that every month will outperform.
-            It promises that every result will be measured the same way and every
-            portfolio decision will remain visible.
-          </p>
-        </header>
-
-        <section className="methodology-grid">
-          <Method number="01" title="Objective">
-            Seek long-term compounded outperformance versus EGX30 Capped while
-            maintaining a simple, understandable portfolio.
-          </Method>
-          <Method number="02" title="Portfolio Construction">
-            Five listed Egyptian equities with explicit target weights. The
-            default structure is equal-weighted unless a published monthly note
-            states otherwise.
-          </Method>
-          <Method number="03" title="Measurement">
-            Individual stock return is measured from the official month-open
-            price to the latest or final close. Portfolio return is the sum of
-            each stock's weighted contribution.
-          </Method>
-          <Method number="04" title="Alpha">
-            Monthly Alpha equals portfolio return less EGX30 Capped return.
-            Cumulative returns are compounded month by month rather than added.
-          </Method>
-          <Method number="05" title="Rebalancing">
-            The portfolio is reviewed on a declared monthly cycle. Any removal,
-            addition or weight change is recorded in the Decision Log.
-          </Method>
-          <Method number="06" title="Transparency Standard">
-            The track record begins at launch. Historical figures are not
-            reconstructed to create a more attractive past.
-          </Method>
-        </section>
-
-        <section className="formula-panel">
-          <div><small>STOCK RETURN</small><strong>(Close − Open) ÷ Open</strong></div>
-          <div><small>WEIGHTED CONTRIBUTION</small><strong>Weight × Stock Return</strong></div>
-          <div><small>MONTHLY ALPHA</small><strong>Portfolio − Benchmark</strong></div>
-          <div><small>CUMULATIVE PERFORMANCE</small><strong>Compounded Month by Month</strong></div>
-        </section>
-
-        <section className="methodology-cta">
+      <main className="methodology-page-v21">
+        <section className="methodology-hero-v21">
           <div>
-            <h2>See the process applied to real monthly decisions.</h2>
-            <p>Registration is free during the founding phase.</p>
+            <span className="eyebrow">{t("methodologyEyebrow")}</span>
+            <h1>{t("methodologyTitle")}</h1>
+            <p>{t("methodologyText")}</p>
           </div>
-          <Link className="button gold large" to="/signup">
-            Join Free <ArrowRight size={17}/>
-          </Link>
+          <div className="methodology-visual">
+            <div className="method-orbit"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><b>AC</b></div>
+          </div>
+        </section>
+
+        <section className="methodology-grid-v21">
+          {methods.map(([icon, number, title, text]) => (
+            <article key={number} className="method-card-v21">
+              <div className="method-card-top"><span>{icon}</span><b>{number}</b></div>
+              <h2>{title}</h2>
+              <p>{text}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="formula-strip-v21">
+          <div><small>01</small><b>{t("formulaPortfolio")}</b><code>Σ (Weight × Stock Return)</code></div>
+          <div><small>02</small><b>{t("formulaBenchmark")}</b><code>(Latest − Open) ÷ Open</code></div>
+          <div><small>03</small><b>{t("formulaAlpha")}</b><code>Portfolio − Benchmark</code></div>
+          <div><small>04</small><b>{t("formulaCumulative")}</b><code>Π (1 + Monthly Return) − 1</code></div>
+        </section>
+
+        <section className="methodology-principles">
+          <div>
+            <span className="eyebrow">REPORTING PRINCIPLES</span>
+            <h2>{isArabic ? "السجل أهم من أي توقع منفرد" : "The record matters more than any single forecast."}</h2>
+          </div>
+          <ul>
+            <li><CheckCircle2/>{isArabic ? "نقطة واحدة واضحة لكل شهر على الجراف" : "One clean chart point for each published month"}</li>
+            <li><CheckCircle2/>{isArabic ? "الشهر الحالي يتحدث دون تشويه السجل" : "The live month updates without cluttering the record"}</li>
+            <li><CheckCircle2/>{isArabic ? "الشهر المقفول يظل ثابتًا" : "Closed months remain frozen in history"}</li>
+            <li><CheckCircle2/>{isArabic ? "الأداء التراكمي محسوب بالتركيب" : "Cumulative results use proper compounding"}</li>
+          </ul>
+        </section>
+
+        <section className="methodology-cta-v21">
+          <div><span className="eyebrow">ALPHA CORE</span><h2>{t("ctaTitle")}</h2><p>{t("ctaText")}</p></div>
+          <Link className="button gold large" to="/signup">{t("signup")} <ArrowRight size={16}/></Link>
         </section>
       </main>
     </div>
-  );
-}
-
-function Method({ number, title, children }) {
-  return (
-    <article className="method-card">
-      <span>{number}</span>
-      <h2>{title}</h2>
-      <p>{children}</p>
-    </article>
   );
 }
