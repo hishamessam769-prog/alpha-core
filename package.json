@@ -1,7 +1,7 @@
 {
-  "name": "alpha-core-v2-2",
+  "name": "alpha-core-v2-3",
   "private": true,
-  "version": "2.2.0",
+  "version": "2.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

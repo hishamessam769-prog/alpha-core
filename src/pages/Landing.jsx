@@ -108,7 +108,7 @@ export default function Landing() {
             <Feature icon={<FileClock/>} number="03" title={t("why3Title")} text={t("why3Text")} />
             <Feature icon={<TrendingUp/>} number="04" title={t("why4Title")} text={t("why4Text")} />
             <Feature icon={<BriefcaseBusiness/>} number="05" title={isArabic ? "أكثر من محفظة" : "Multiple portfolios"} text={isArabic ? "كل محفظة لها مؤشرها وشهورها وجرافها وأداؤها التراكمي المستقل." : "Each portfolio has its own benchmark, monthly record, chart and cumulative performance."} />
-            <Feature icon={<FlaskConical/>} number="06" title={isArabic ? "أبحاث قابلة للقياس" : "Measurable research"} text={isArabic ? "كل توصية مستقلة مرتبطة بسعر بداية ومستهدف 12 شهر وأداء مقابل EGX30 Capped." : "Every independent idea links the thesis to an entry price, one 12-month target and EGX30 Capped Alpha."} />
+            <Feature icon={<FlaskConical/>} number="06" title={isArabic ? "توصيات مستقلة قابلة للقياس" : "Measurable independent recommendations"} text={isArabic ? "كل توصية مستقلة مرتبطة بسعر بداية ومستهدف 12 شهر وأداء مقابل EGX30 Capped." : "Every independent recommendation links the thesis to an entry price, one 12-month target and EGX30 Capped Alpha."} />
           </div>
         </section>
 

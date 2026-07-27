@@ -4,7 +4,7 @@ import DashboardHeader from "../components/DashboardHeader";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { formatNumber, formatPercent } from "../lib/calculations";
-import { recommendationMetrics, recommendationStatusLabel } from "../lib/recommendations";
+import { recommendationActionLabel, recommendationMetrics, recommendationStatusLabel } from "../lib/recommendations";
 import { supabase } from "../lib/supabase";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -21,6 +21,7 @@ const blankRecommendation = () => ({
   benchmark_ticker: "EGX30CAP",
   benchmark_entry: 0,
   status: "draft",
+  action_status: "invest",
   close_date: null,
   close_price: null,
   benchmark_close: null,
@@ -95,7 +96,7 @@ export default function RecommendationAdmin() {
 
   const save = async ({ publish = form.is_published, status = form.status } = {}) => {
     if (saving) return;
-    if (!form.ticker.trim() || !form.company_name.trim() || !form.title.trim()) return setMessage(isArabic ? "اكتب رمز السهم واسم الشركة وعنوان البحث" : "Enter ticker, company name and research title.");
+    if (!form.ticker.trim() || !form.company_name.trim() || !form.title.trim()) return setMessage(isArabic ? "اكتب رمز السهم واسم الشركة وعنوان التوصية" : "Enter ticker, company name and idea title.");
     if (!(Number(form.entry_price) > 0) || !(Number(form.target_price) > 0) || !(Number(form.benchmark_entry) > 0)) return setMessage(isArabic ? "أسعار البداية والمستهدف والمؤشر لازم تكون أكبر من صفر" : "Entry, target and benchmark opening values must be greater than zero.");
 
     setSaving(true);
@@ -112,6 +113,7 @@ export default function RecommendationAdmin() {
         benchmark_ticker: (form.benchmark_ticker || "EGX30CAP").trim().toUpperCase(),
         benchmark_entry: Number(form.benchmark_entry),
         status,
+        action_status: form.action_status || "invest",
         close_date: form.close_date || null,
         close_price: form.close_price === "" || form.close_price == null ? null : Number(form.close_price),
         benchmark_close: form.benchmark_close === "" || form.benchmark_close == null ? null : Number(form.benchmark_close),
@@ -132,7 +134,7 @@ export default function RecommendationAdmin() {
         if (error) throw error;
         id = data.id;
       }
-      setMessage(publish ? (isArabic ? "تم نشر التوصية والبحث للأعضاء" : "Recommendation and research published to members.") : (isArabic ? "تم حفظ المسودة" : "Draft saved."));
+      setMessage(publish ? (isArabic ? "تم نشر التوصية المستقلة للأعضاء" : "Independent recommendation published to members.") : (isArabic ? "تم حفظ المسودة" : "Draft saved."));
       await load(id);
     } catch (error) {
       setMessage(error.message);
@@ -204,7 +206,7 @@ export default function RecommendationAdmin() {
       <DashboardHeader admin />
       <div className="admin-workspace-v21 recommendation-admin-v22">
         <aside className="admin-months-v21">
-          <div className="admin-profile-v21"><small>{isArabic ? "مركز الأبحاث" : "RESEARCH DESK"}</small><b>{profile?.full_name || profile?.email}</b></div>
+          <div className="admin-profile-v21"><small>{isArabic ? "مكتب التوصيات المستقلة" : "INDEPENDENT RECOMMENDATIONS DESK"}</small><b>{profile?.full_name || profile?.email}</b></div>
           <button className="button gold full" onClick={newIdea}><Plus size={16}/>{isArabic ? "توصية جديدة" : "New recommendation"}</button>
           <nav>
             {recommendations.map((item) => <button className={selectedId === item.id ? "active" : ""} key={item.id} onClick={() => choose(item)}>
@@ -212,12 +214,12 @@ export default function RecommendationAdmin() {
               <small className={item.status === "open" ? "live" : item.status === "draft" ? "draft" : "final"}>{recommendationStatusLabel(item.status, isArabic)}</small>
             </button>)}
           </nav>
-          <a className="button subtle full" href="/research"><Eye size={16}/>{isArabic ? "عرض صفحة الأبحاث" : "View research hub"}</a>
+          <a className="button subtle full" href="/recommendations"><Eye size={16}/>{isArabic ? "عرض التوصيات المستقلة" : "View independent recommendations"}</a>
         </aside>
 
         <main className="admin-content-v21">
           <header className="admin-top-v21">
-            <div><span className="eyebrow">INDEPENDENT RECOMMENDATION</span><h1>{form.ticker || (isArabic ? "توصية جديدة" : "New idea")}</h1><p>{isArabic ? "سعر مستهدف واحد خلال 12 شهر مع أداء مقابل EGX30 Capped وسجل تحديثات." : "One 12-month target with EGX30 Capped performance and a permanent update log."}</p></div>
+            <div><span className="eyebrow">INDEPENDENT IDEA</span><h1>{form.ticker || (isArabic ? "توصية جديدة" : "New recommendation")}</h1><p>{isArabic ? "قرار حالي واضح مع مستهدف واحد خلال 12 شهر وأداء مقابل EGX30 Capped وسجل تحديثات." : "A clear current action, one 12-month target, EGX30 Capped performance and a permanent update log."}</p></div>
             <div className="admin-actions-v21">
               {!form.is_published && form.id && <button className="button danger" onClick={deleteDraft}><Trash2 size={15}/></button>}
               <button className="button subtle" disabled={saving} onClick={() => save({ publish: false, status: form.status === "draft" ? "draft" : form.status })}><Save size={16}/>{isArabic ? "حفظ مسودة" : "Save draft"}</button>
@@ -243,20 +245,21 @@ export default function RecommendationAdmin() {
               <div className="admin-form-grid-v21 recommendation-form-v22">
                 <label>{isArabic ? "رمز السهم" : "Ticker"}<input value={form.ticker || ""} onChange={(e) => setForm({ ...form, ticker: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12) })}/></label>
                 <label>{isArabic ? "اسم الشركة" : "Company name"}<input value={form.company_name || ""} onChange={(e) => setForm({ ...form, company_name: e.target.value })}/></label>
-                <label className="wide">{isArabic ? "عنوان البحث" : "Research title"}<input value={form.title || ""} onChange={(e) => setForm({ ...form, title: e.target.value })}/></label>
+                <label className="wide">{isArabic ? "عنوان التوصية" : "Idea title"}<input value={form.title || ""} onChange={(e) => setForm({ ...form, title: e.target.value })}/></label>
                 <label>{isArabic ? "تاريخ التوصية" : "Recommendation date"}<input type="date" value={form.recommendation_date || ""} onChange={(e) => setForm({ ...form, recommendation_date: e.target.value })}/></label>
                 <label>{isArabic ? "الأفق الزمني" : "Horizon"}<input value="12 months" disabled/></label>
                 <label>{isArabic ? "سعر التوصية" : "Entry price"}<input type="number" step=".01" value={form.entry_price} onChange={(e) => setForm({ ...form, entry_price: Number(e.target.value) })}/></label>
                 <label>{isArabic ? "السعر المستهدف" : "Target price"}<input type="number" step=".01" value={form.target_price} onChange={(e) => setForm({ ...form, target_price: Number(e.target.value) })}/></label>
                 <label>{isArabic ? "رمز المؤشر" : "Benchmark ticker"}<input value={form.benchmark_ticker || "EGX30CAP"} onChange={(e) => setForm({ ...form, benchmark_ticker: e.target.value.toUpperCase() })}/></label>
                 <label>{isArabic ? "قيمة المؤشر عند البداية" : "Benchmark at entry"}<input type="number" step=".01" value={form.benchmark_entry} onChange={(e) => setForm({ ...form, benchmark_entry: Number(e.target.value) })}/></label>
-                <label>{isArabic ? "الحالة الحالية" : "Current status"}<select value={["draft","open"].includes(form.status) ? form.status : "open"} disabled={!(["draft","open"].includes(form.status))} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="draft">Draft</option><option value="open">Open</option></select></label>
+                <label>{isArabic ? "حالة السجل" : "Record status"}<select value={["draft","open"].includes(form.status) ? form.status : "open"} disabled={!(["draft","open"].includes(form.status))} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="draft">Draft</option><option value="open">Open</option></select></label>
+                <label>{isArabic ? "القرار الحالي للمستثمر" : "Current investor action"}<select value={form.action_status || "invest"} disabled={!(["draft","open"].includes(form.status))} onChange={(e) => setForm({ ...form, action_status: e.target.value })}><option value="invest">{recommendationActionLabel("invest", isArabic)}</option><option value="hold">{recommendationActionLabel("hold", isArabic)}</option></select></label>
                 <label>{isArabic ? "آخر تحديث سعر" : "Last price update"}<input value={currentStockPrice?.price_date || "—"} disabled/></label>
               </div>
             </article>
 
             <article className="panel-v21 padded-v21">
-              <div className="panel-heading-v21"><div><span className="eyebrow">RESEARCH</span><h2>{isArabic ? "القصة والفرضية الاستثمارية" : "Story and investment thesis"}</h2></div></div>
+              <div className="panel-heading-v21"><div><span className="eyebrow">FUNDAMENTAL CASE</span><h2>{isArabic ? "القصة والفرضية الاستثمارية" : "Story and investment case"}</h2></div></div>
               <div className="admin-form-grid-v21">
                 <label className="wide">{isArabic ? "قصة الشركة" : "Company story"}<textarea rows="7" value={form.company_story || ""} onChange={(e) => setForm({ ...form, company_story: e.target.value })}/></label>
                 <label className="wide">{isArabic ? "ليه اخترنا السهم" : "Why we selected the stock"}<textarea rows="7" value={form.why_selected || ""} onChange={(e) => setForm({ ...form, why_selected: e.target.value })}/></label>

@@ -11,6 +11,14 @@ export const recommendationStatusLabel = (status, isArabic = false) => {
   return labels[status] || status;
 };
 
+export const recommendationActionLabel = (actionStatus, isArabic = false) => {
+  const labels = {
+    invest: isArabic ? "استثمر" : "Invest",
+    hold: isArabic ? "احتفظ / انتظر" : "Hold / Wait",
+  };
+  return labels[actionStatus] || labels.invest;
+};
+
 export const dateOnly = (value) => {
   if (!value) return null;
   const date = new Date(`${String(value).slice(0, 10)}T12:00:00`);
@@ -62,6 +70,8 @@ export function recommendationSummary(recommendations = [], prices = {}) {
   const evaluated = recommendations.map((item) => ({ item, metrics: recommendationMetrics(item, prices) }));
   const closed = evaluated.filter(({ item }) => !["open", "draft"].includes(item.status));
   const open = evaluated.filter(({ item }) => item.status === "open");
+  const invest = open.filter(({ item }) => (item.action_status || "invest") === "invest");
+  const hold = open.filter(({ item }) => item.action_status === "hold");
   const average = (rows, selector) => rows.length
     ? rows.reduce((sum, row) => sum + Number(selector(row) || 0), 0) / rows.length
     : 0;
@@ -71,6 +81,8 @@ export function recommendationSummary(recommendations = [], prices = {}) {
     total: recommendations.length,
     open: open.length,
     closed: closed.length,
+    invest: invest.length,
+    hold: hold.length,
     successRate: closed.length ? (winners.length / closed.length) * 100 : 0,
     averageClosedReturn: average(closed, ({ metrics }) => metrics.returnPct),
     averageClosedAlpha: average(closed, ({ metrics }) => metrics.alpha),

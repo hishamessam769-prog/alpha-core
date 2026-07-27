@@ -15,7 +15,8 @@ export default function PublicHeader() {
       <nav className="public-nav">
         <NavLink to="/" end>{t("navHome")}</NavLink>
         <NavLink to="/methodology">{t("navMethodology")}</NavLink>
-        {session && <NavLink to="/research">{isArabic ? "الأبحاث" : "Research"}</NavLink>}
+        {session && <NavLink to="/recommendations">{isArabic ? "توصيات مستقلة" : "Independent recommendations"}</NavLink>}
+        {session && <NavLink to="/weekly-reports">{isArabic ? "تقارير أسبوعية" : "Weekly reports"}</NavLink>}
       </nav>
       <div className="header-actions">
         <LanguageToggle compact />
