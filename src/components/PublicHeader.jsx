@@ -6,7 +6,7 @@ import { useLanguage } from "../context/LanguageContext";
 
 export default function PublicHeader() {
   const { session, profile } = useAuth();
-  const { t } = useLanguage();
+  const { t, isArabic } = useLanguage();
   const destination = profile?.is_admin ? "/admin" : "/dashboard";
 
   return (
@@ -15,6 +15,7 @@ export default function PublicHeader() {
       <nav className="public-nav">
         <NavLink to="/" end>{t("navHome")}</NavLink>
         <NavLink to="/methodology">{t("navMethodology")}</NavLink>
+        {session && <NavLink to="/research">{isArabic ? "الأبحاث" : "Research"}</NavLink>}
       </nav>
       <div className="header-actions">
         <LanguageToggle compact />

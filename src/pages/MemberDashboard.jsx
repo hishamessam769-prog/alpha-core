@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Activity, CalendarClock, Download, RefreshCw, ShieldCheck, TrendingUp } from "lucide-react";
+import { Activity, BriefcaseBusiness, CalendarClock, Download, RefreshCw, ShieldCheck, TrendingUp } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import DashboardHeader from "../components/DashboardHeader";
@@ -19,21 +19,22 @@ import {
   monthLabel,
 } from "../lib/calculations";
 
-async function loadPublishedMonths() {
-  const { data, error } = await supabase
-    .from("strategy_months")
-    .select("*, holdings(*), swaps(*), snapshots(*)")
-    .eq("is_published", true)
-    .order("month_key", { ascending: true });
-  if (error) throw error;
-  return data || [];
+async function loadPublishedData() {
+  const [{ data: portfolios, error: portfolioError }, { data: months, error: monthError }] = await Promise.all([
+    supabase.from("portfolios").select("*").eq("is_published", true).order("created_at", { ascending: true }),
+    supabase.from("strategy_months").select("*, holdings(*), swaps(*), snapshots(*)").eq("is_published", true).order("month_key", { ascending: true }),
+  ]);
+  if (portfolioError || monthError) throw portfolioError || monthError;
+  return { portfolios: portfolios || [], months: months || [] };
 }
 
 export default function MemberDashboard() {
   const reportRef = useRef(null);
   const { t, isArabic } = useLanguage();
   const locale = isArabic ? "ar-EG" : "en-GB";
-  const [months, setMonths] = useState([]);
+  const [portfolios, setPortfolios] = useState([]);
+  const [allMonths, setAllMonths] = useState([]);
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState("");
   const [selectedKey, setSelectedKey] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -43,9 +44,15 @@ export default function MemberDashboard() {
   const refresh = async () => {
     try {
       setLoading(true);
-      const data = await loadPublishedMonths();
-      setMonths(data);
-      setSelectedKey((current) => data.some((m) => m.month_key === current) ? current : data.at(-1)?.month_key || "");
+      const { portfolios: nextPortfolios, months: nextMonths } = await loadPublishedData();
+      setPortfolios(nextPortfolios);
+      setAllMonths(nextMonths);
+      setSelectedPortfolioId((current) => {
+        const portfolioId = nextPortfolios.some((item) => item.id === current) ? current : nextPortfolios[0]?.id || "";
+        const portfolioMonths = nextMonths.filter((month) => month.portfolio_id === portfolioId);
+        setSelectedKey((key) => portfolioMonths.some((month) => month.month_key === key) ? key : portfolioMonths.at(-1)?.month_key || "");
+        return portfolioId;
+      });
       setMessage("");
     } catch (error) {
       setMessage(error.message);
@@ -57,7 +64,8 @@ export default function MemberDashboard() {
   useEffect(() => {
     refresh();
     const channel = supabase
-      .channel("alpha-core-members-v21")
+      .channel("alpha-core-members-v22")
+      .on("postgres_changes", { event: "*", schema: "public", table: "portfolios" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "strategy_months" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "holdings" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "swaps" }, refresh)
@@ -65,6 +73,8 @@ export default function MemberDashboard() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  const currentPortfolio = portfolios.find((item) => item.id === selectedPortfolioId) || portfolios[0] || null;
+  const months = useMemo(() => allMonths.filter((month) => month.portfolio_id === currentPortfolio?.id), [allMonths, currentPortfolio?.id]);
   const selected = months.find((month) => month.month_key === selectedKey) || months.at(-1);
   const metrics = useMemo(() => calculateMonth(selected), [selected]);
   const selectedReturns = useMemo(() => effectiveReturns(selected), [selected]);
@@ -73,6 +83,13 @@ export default function MemberDashboard() {
   const fullSeries = useMemo(() => buildMonthlyPerformanceSeries(months, locale), [months, locale]);
   const chartData = useMemo(() => filterSeriesByRange(fullSeries, range), [fullSeries, range]);
   const recentUpdates = [...trackRecord].reverse().slice(0, 4);
+
+  const changePortfolio = (id) => {
+    setSelectedPortfolioId(id);
+    const nextMonths = allMonths.filter((month) => month.portfolio_id === id);
+    setSelectedKey(nextMonths.at(-1)?.month_key || "");
+    setRange("ALL");
+  };
 
   const exportPdf = async () => {
     if (!reportRef.current || exporting) return;
@@ -105,7 +122,7 @@ export default function MemberDashboard() {
         pdf.addImage(imgData, "JPEG", 0, position, pageWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-      pdf.save(`ALPHA-CORE-${selected?.month_key || "REPORT"}-V2.1.pdf`);
+      pdf.save(`ALPHA-CORE-${currentPortfolio?.slug || "PORTFOLIO"}-${selected?.month_key || "REPORT"}-V2.2.pdf`);
       setMessage("");
     } catch (error) {
       setMessage(error.message);
@@ -129,14 +146,22 @@ export default function MemberDashboard() {
         </div>
       ) : (
         <main ref={reportRef} className="member-report-v21">
+          <section className="portfolio-identity-v22" data-html2canvas-ignore="true">
+            <div><BriefcaseBusiness size={18}/><span><small>{isArabic ? "المحفظة" : "PORTFOLIO"}</small><b>{isArabic && currentPortfolio?.name_ar ? currentPortfolio.name_ar : currentPortfolio?.name}</b></span></div>
+            <select value={currentPortfolio?.id || ""} onChange={(e) => changePortfolio(e.target.value)}>
+              {portfolios.map((portfolio) => <option key={portfolio.id} value={portfolio.id}>{isArabic && portfolio.name_ar ? portfolio.name_ar : portfolio.name}</option>)}
+            </select>
+          </section>
+
           <section className="report-hero-v21">
             <div className="report-title-block">
               <span className="eyebrow">{t("dashboardEyebrow")}</span>
               <h1>{monthLabel(selected.month_key, false, locale)}</h1>
-              <p>{selected.public_commentary || t("dashboardSubtitle")}</p>
+              <p>{selected.public_commentary || currentPortfolio?.description || t("dashboardSubtitle")}</p>
               <div className="report-meta-row">
                 <span><CalendarClock size={14}/><small>{t("lastUpdated")}</small><b>{dateTimeLabel(selected.updated_at, locale)}</b></span>
                 <span><ShieldCheck size={14}/><small>{t("status")}</small><b className={selected.is_closed ? "final-text" : "live-text"}>{selected.is_closed ? t("final") : t("live")}</b></span>
+                <span><BriefcaseBusiness size={14}/><small>{isArabic ? "المؤشر" : "Benchmark"}</small><b>{selected.benchmark_ticker || currentPortfolio?.benchmark_ticker || "EGX30CAP"}</b></span>
               </div>
             </div>
             <div className="report-controls-v21" data-html2canvas-ignore="true">
@@ -150,10 +175,10 @@ export default function MemberDashboard() {
 
           <section className="kpi-grid-v21">
             <KpiCard title={t("portfolioMtd")} value={formatPercent(selectedReturns.portfolio)} note={isArabic ? "العائد المرجح للشهر" : "Weighted monthly return"} tone={selectedReturns.portfolio >= 0 ? "blue" : "red"} icon={<TrendingUp/>}/>
-            <KpiCard title={t("benchmarkMtd")} value={formatPercent(selectedReturns.benchmark)} note="EGX30 Capped" tone={selectedReturns.benchmark >= 0 ? "gold" : "red"}/>
+            <KpiCard title={t("benchmarkMtd")} value={formatPercent(selectedReturns.benchmark)} note={selected.benchmark_ticker || "EGX30CAP"} tone={selectedReturns.benchmark >= 0 ? "gold" : "red"}/>
             <KpiCard title={t("monthlyAlpha")} value={formatPercent(selectedReturns.portfolio - selectedReturns.benchmark)} note={isArabic ? "المحفظة ناقص المؤشر" : "Portfolio less benchmark"} tone={selectedReturns.portfolio - selectedReturns.benchmark >= 0 ? "green" : "red"}/>
-            <KpiCard title={t("cumulativePortfolio")} value={formatPercent(latestCumulative.cumulativePortfolio)} note={isArabic ? "منذ الإطلاق" : "Compounded since launch"} tone={Number(latestCumulative.cumulativePortfolio || 0) >= 0 ? "blue" : "red"}/>
-            <KpiCard title={t("cumulativeBenchmark")} value={formatPercent(latestCumulative.cumulativeBenchmark)} note={isArabic ? "منذ الإطلاق" : "Compounded since launch"} tone={Number(latestCumulative.cumulativeBenchmark || 0) >= 0 ? "gold" : "red"}/>
+            <KpiCard title={t("cumulativePortfolio")} value={formatPercent(latestCumulative.cumulativePortfolio)} note={isArabic ? "منذ إطلاق هذه المحفظة" : "Compounded since this portfolio launched"} tone={Number(latestCumulative.cumulativePortfolio || 0) >= 0 ? "blue" : "red"}/>
+            <KpiCard title={t("cumulativeBenchmark")} value={formatPercent(latestCumulative.cumulativeBenchmark)} note={isArabic ? "منذ إطلاق هذه المحفظة" : "Compounded since this portfolio launched"} tone={Number(latestCumulative.cumulativeBenchmark || 0) >= 0 ? "gold" : "red"}/>
             <KpiCard title={t("cumulativeAlpha")} value={formatPercent(latestCumulative.cumulativeAlpha)} note={isArabic ? "المحفظة ناقص المؤشر منذ الإطلاق" : "Portfolio less benchmark since launch"} tone={Number(latestCumulative.cumulativeAlpha || 0) >= 0 ? "green" : "red"}/>
           </section>
 

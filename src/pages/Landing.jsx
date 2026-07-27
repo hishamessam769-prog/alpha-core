@@ -1,4 +1,4 @@
-import { ArrowRight, BarChart3, CheckCircle2, FileClock, LockKeyhole, ShieldCheck, Target, TrendingUp } from "lucide-react";
+import { ArrowRight, BarChart3, BriefcaseBusiness, CheckCircle2, FileClock, FlaskConical, LockKeyhole, ShieldCheck, Target, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import PublicHeader from "../components/PublicHeader";
 import SetupNotice from "../components/SetupNotice";
@@ -107,6 +107,8 @@ export default function Landing() {
             <Feature icon={<BarChart3/>} number="02" title={t("why2Title")} text={t("why2Text")} />
             <Feature icon={<FileClock/>} number="03" title={t("why3Title")} text={t("why3Text")} />
             <Feature icon={<TrendingUp/>} number="04" title={t("why4Title")} text={t("why4Text")} />
+            <Feature icon={<BriefcaseBusiness/>} number="05" title={isArabic ? "أكثر من محفظة" : "Multiple portfolios"} text={isArabic ? "كل محفظة لها مؤشرها وشهورها وجرافها وأداؤها التراكمي المستقل." : "Each portfolio has its own benchmark, monthly record, chart and cumulative performance."} />
+            <Feature icon={<FlaskConical/>} number="06" title={isArabic ? "أبحاث قابلة للقياس" : "Measurable research"} text={isArabic ? "كل توصية مستقلة مرتبطة بسعر بداية ومستهدف 12 شهر وأداء مقابل EGX30 Capped." : "Every independent idea links the thesis to an entry price, one 12-month target and EGX30 Capped Alpha."} />
           </div>
         </section>
 
@@ -135,7 +137,7 @@ export default function Landing() {
         </section>
 
         <section className="cta-v21">
-          <div><ShieldCheck size={30}/><span className="eyebrow">ALPHA CORE V2.1</span><h2>{t("ctaTitle")}</h2><p>{t("ctaText")}</p></div>
+          <div><ShieldCheck size={30}/><span className="eyebrow">ALPHA CORE V2.2</span><h2>{t("ctaTitle")}</h2><p>{t("ctaText")}</p></div>
           <Link className="button gold large" to="/signup">{t("signup")} <span>{arrow}</span></Link>
         </section>
       </main>
