@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 import KpiCard from "../components/KpiCard";
 import { useLanguage } from "../context/LanguageContext";
-import { formatNumber, formatPercent } from "../lib/calculations";
+import { dateTimeLabel, formatNumber, formatPercent } from "../lib/calculations";
 import { recommendationActionLabel, recommendationMetrics, recommendationStatusLabel, recommendationSummary } from "../lib/recommendations";
 import { supabase } from "../lib/supabase";
 
@@ -110,7 +110,7 @@ export default function IdeasHub() {
                     <span><small>EGX30 Capped</small><b className={metrics.benchmarkReturn >= 0 ? "gold-text" : "negative"}>{formatPercent(metrics.benchmarkReturn)}</b></span>
                     <span><small>Alpha</small><b className={metrics.alpha >= 0 ? "positive" : "negative"}>{formatPercent(metrics.alpha)}</b></span>
                   </div>
-                  <footer><span>{metrics.durationDays} {isArabic ? "يوم" : "days"} · {metrics.priceDate ? new Date(`${metrics.priceDate}T12:00:00`).toLocaleDateString(locale) : "—"}</span><b>{isArabic ? "عرض التوصية" : "Open recommendation"}<ArrowUpRight size={14}/></b></footer>
+                  <footer><span>{metrics.durationDays} {isArabic ? "يوم" : "days"} · {isArabic ? "آخر تحديث" : "Updated"} {dateTimeLabel(item.updated_at, locale)}</span><b>{isArabic ? "عرض التوصية" : "Open recommendation"}<ArrowUpRight size={14}/></b></footer>
                 </Link>
               );
             })}

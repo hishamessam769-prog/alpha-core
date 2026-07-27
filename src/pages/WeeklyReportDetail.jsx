@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
+import { dateTimeLabel } from "../lib/calculations";
 
 export default function WeeklyReportDetail() {
   const { slug } = useParams();
@@ -37,7 +38,7 @@ export default function WeeklyReportDetail() {
           <span className="eyebrow">ALPHA CORE WEEKLY REPORT</span>
           <h1>{report.title}</h1>
           <p>{report.summary}</p>
-          <div><CalendarRange size={16}/><span>{new Date(`${report.week_start}T12:00:00`).toLocaleDateString(locale)} — {new Date(`${report.week_end}T12:00:00`).toLocaleDateString(locale)}</span></div>
+          <div><CalendarRange size={16}/><span>{new Date(`${report.week_start}T12:00:00`).toLocaleDateString(locale)} — {new Date(`${report.week_end}T12:00:00`).toLocaleDateString(locale)}</span><span>· {isArabic ? "آخر تحديث" : "Last updated"}: {dateTimeLabel(report.updated_at || report.published_at, locale)}</span></div>
         </header>
 
         <section className="weekly-sections-v23">

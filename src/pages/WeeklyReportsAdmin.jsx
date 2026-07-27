@@ -4,6 +4,7 @@ import DashboardHeader from "../components/DashboardHeader";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
+import { dateTimeLabel } from "../lib/calculations";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const weekStart = () => {
@@ -33,6 +34,7 @@ const blankReport = () => ({
   watch_next: "",
   is_published: false,
   published_at: null,
+  is_demo: false,
 });
 
 export default function WeeklyReportsAdmin() {
@@ -44,10 +46,16 @@ export default function WeeklyReportsAdmin() {
   const [form, setForm] = useState(blankReport());
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [profiles, setProfiles] = useState([]);
+  const isSuperAdmin = Boolean(profile?.is_super_admin);
 
   const load = async (preferredId) => {
-    const { data, error } = await supabase.from("weekly_reports").select("*").order("week_end", { ascending: false });
-    if (error) setMessage(error.message);
+    const [{ data, error }, { data: profileRows, error: profileError }] = await Promise.all([
+      supabase.from("weekly_reports").select("*").order("week_end", { ascending: false }),
+      supabase.from("profiles").select("id, full_name, email, is_super_admin"),
+    ]);
+    if (error || profileError) setMessage(error?.message || profileError?.message || "");
+    setProfiles(profileRows || []);
     const rows = data || [];
     setReports(rows);
     const selected = rows.find((item) => item.id === preferredId) || rows.find((item) => item.id === selectedId) || rows[0];
@@ -79,6 +87,7 @@ export default function WeeklyReportsAdmin() {
       watch_next: form.watch_next || "",
       is_published: Boolean(publish),
       published_at: publish ? (form.published_at || new Date().toISOString()) : null,
+      is_demo: Boolean(form.is_demo),
       updated_at: new Date().toISOString(),
     };
     let id = form.id;
@@ -96,10 +105,14 @@ export default function WeeklyReportsAdmin() {
   };
 
   const remove = async () => {
-    if (!form.id || !window.confirm(isArabic ? "حذف التقرير؟" : "Delete this report?")) return;
-    const { error } = await supabase.from("weekly_reports").delete().eq("id", form.id);
+    if (!isSuperAdmin || !form.id) return;
+    const confirmed = window.confirm(isArabic
+      ? `تحذير واضح: سيتم حذف التقرير الأسبوعي "${form.title}" نهائيًا. لا يمكن التراجع. هل تؤكد؟`
+      : `Clear warning: weekly report "${form.title}" will be permanently deleted. This cannot be undone. Confirm?`);
+    if (!confirmed) return;
+    const { error } = await supabase.rpc("delete_weekly_report", { p_report_id: form.id });
     if (error) return setMessage(error.message);
-    setMessage(isArabic ? "تم حذف التقرير" : "Report deleted.");
+    setMessage(isArabic ? "تم حذف التقرير بواسطة Super Admin" : "Report deleted by Super Admin.");
     await load();
   };
 
@@ -125,7 +138,7 @@ export default function WeeklyReportsAdmin() {
           <header className="admin-top-v21">
             <div><span className="eyebrow">WEEKLY REPORT</span><h1>{form.title || (isArabic ? "تقرير أسبوعي جديد" : "New weekly report")}</h1><p>{isArabic ? "اكتب التقرير مرة واحدة ثم انشره للأعضاء وانسخ نسخة جاهزة للميديا." : "Write once, publish to members and copy a media-ready version."}</p></div>
             <div className="admin-actions-v21">
-              {form.id && <button className="button danger" onClick={remove}><Trash2 size={15}/></button>}
+              {isSuperAdmin && form.id && <button className="button danger" onClick={remove}><Trash2 size={15}/></button>}
               <button className="button subtle" onClick={copyForMedia}><Copy size={15}/>{isArabic ? "نسخ للميديا" : "Copy for media"}</button>
               <button className="button subtle" disabled={saving} onClick={() => save(false)}><Save size={15}/>{isArabic ? "حفظ مسودة" : "Save draft"}</button>
               <button className="button gold" disabled={saving} onClick={() => save(true)}><Send size={15}/>{isArabic ? "نشر التقرير" : "Publish"}</button>
@@ -141,7 +154,17 @@ export default function WeeklyReportsAdmin() {
                 <label className="wide">{isArabic ? "عنوان التقرير" : "Report title"}<input value={form.title || ""} onChange={(e) => setForm({ ...form, title: e.target.value })}/></label>
                 <label>{isArabic ? "بداية الأسبوع" : "Week start"}<input type="date" value={form.week_start || today()} onChange={(e) => setForm({ ...form, week_start: e.target.value })}/></label>
                 <label>{isArabic ? "نهاية الأسبوع" : "Week end"}<input type="date" value={form.week_end || today()} onChange={(e) => setForm({ ...form, week_end: e.target.value })}/></label>
-                <label className="wide">{isArabic ? "ملخص يظهر على الكارت" : "Card summary"}<textarea rows="4" value={form.summary || ""} onChange={(e) => setForm({ ...form, summary: e.target.value })}/></label>
+                <label className="wide">{isArabic ? "ملخص يظهر على الكارت" : "Card summary"}<textarea rows="4" value={form.summary || ""} onChange={(e) => setForm({ ...form, summary: e.target.value })}/></label><label className="check-label-v22"><input type="checkbox" checked={Boolean(form.is_demo)} onChange={(e) => setForm({ ...form, is_demo: e.target.checked })}/>{isArabic ? "تمييز كتقرير تجريبي" : "Mark as demo data"}</label>
+              </div>
+            </article>
+
+            <article className="panel-v21 padded-v21 transparency-panel-v231">
+              <div className="panel-heading-v21"><div><span className="eyebrow">TRANSPARENCY</span><h2>{isArabic ? "سجل الإنشاء والتعديل" : "Creation and modification record"}</h2></div><span className={`status-pill ${isSuperAdmin ? "live" : "draft"}`}>{isSuperAdmin ? "SUPER ADMIN" : "ADMIN"}</span></div>
+              <div className="audit-metadata-grid-v231">
+                <Meta label="Created At" value={dateTimeLabel(form.created_at, locale)}/>
+                <Meta label="Last Updated" value={dateTimeLabel(form.updated_at, locale)}/>
+                <Meta label="Created By" value={profileName(profiles, form.created_by)}/>
+                <Meta label="Updated By" value={profileName(profiles, form.updated_by)}/>
               </div>
             </article>
 
@@ -159,4 +182,14 @@ export default function WeeklyReportsAdmin() {
       </div>
     </div>
   );
+}
+
+function Meta({ label, value }) {
+  return <div><small>{label}</small><b>{value || "—"}</b></div>;
+}
+
+function profileName(profiles, id) {
+  if (!id) return "—";
+  const found = profiles.find((item) => item.id === id);
+  return found?.full_name || found?.email || id;
 }

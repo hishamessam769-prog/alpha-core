@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, BriefcaseBusiness, Eye, Mail, Plus, Save, Send, Trash2, Users, X } from "lucide-react";
+import { BarChart3, BriefcaseBusiness, Eye, FileText, History, Mail, Plus, Save, Send, ShieldAlert, Trash2, Users, X } from "lucide-react";
 import DashboardHeader from "../components/DashboardHeader";
+import PortfolioReportStudio from "../components/PortfolioReportStudio";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
-import { calculateMonth, formatPercent, monthLabel } from "../lib/calculations";
+import { calculateMonth, dateTimeLabel, formatPercent, monthLabel } from "../lib/calculations";
 
 const makeHolding = (index) => ({
   local_id: crypto.randomUUID(),
@@ -31,6 +32,9 @@ const makeMonth = (portfolioId, benchmarkTicker = "EGX30CAP") => ({
   monthly_objective: "Outperform EGX30 Capped through disciplined stock selection.",
   investor_guidance_title: "Published Target Allocation",
   investor_guidance: "Existing investors should rebalance to the published target weights. New investors should allocate according to the current portfolio.",
+  current_investor_guidance: "Existing investors should rebalance to the published target weights.",
+  new_investor_guidance: "New investors should allocate according to the current published weights.",
+  is_demo: false,
   is_published: false,
   is_closed: false,
   final_portfolio_return: null,
@@ -51,6 +55,7 @@ const blankPortfolio = () => ({
   launch_date: new Date().toISOString().slice(0, 10),
   status: "live",
   is_published: true,
+  is_demo: false,
 });
 
 export default function AdminDashboard() {
@@ -67,18 +72,22 @@ export default function AdminDashboard() {
   const [members, setMembers] = useState([]);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [activities, setActivities] = useState([]);
+  const [reportOpen, setReportOpen] = useState(false);
 
+  const isSuperAdmin = Boolean(profile?.is_super_admin);
   const metrics = useMemo(() => calculateMonth(form), [form]);
   const currentPortfolio = portfolios.find((item) => item.id === selectedPortfolioId) || null;
   const portfolioMonths = useMemo(() => months.filter((item) => item.portfolio_id === selectedPortfolioId), [months, selectedPortfolioId]);
 
   const loadData = async ({ preferredPortfolioId, preferredMonthId } = {}) => {
-    const [{ data: portfolioRows, error: portfolioError }, { data: monthRows, error: monthError }, { data: memberRows, error: memberError }] = await Promise.all([
+    const [{ data: portfolioRows, error: portfolioError }, { data: monthRows, error: monthError }, { data: memberRows, error: memberError }, { data: activityRows, error: activityError }] = await Promise.all([
       supabase.from("portfolios").select("*").order("created_at", { ascending: true }),
       supabase.from("strategy_months").select("*, holdings(*), swaps(*), snapshots(*)").order("month_key", { ascending: false }),
-      supabase.from("profiles").select("id, full_name, email, newsletter_opt_in, created_at, is_admin").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("id, full_name, email, newsletter_opt_in, created_at, is_admin, is_super_admin").order("created_at", { ascending: false }),
+      supabase.from("activity_logs").select("*").order("occurred_at", { ascending: false }).limit(60),
     ]);
-    const error = portfolioError || monthError || memberError;
+    const error = portfolioError || monthError || memberError || activityError;
     if (error) setMessage(error.message);
 
     const nextPortfolios = portfolioRows || [];
@@ -86,6 +95,7 @@ export default function AdminDashboard() {
     setPortfolios(nextPortfolios);
     setMonths(nextMonths);
     setMembers(memberRows || []);
+    setActivities(activityRows || []);
 
     const portfolioId = preferredPortfolioId || selectedPortfolioId || nextPortfolios[0]?.id || "";
     setSelectedPortfolioId(portfolioId);
@@ -144,6 +154,7 @@ export default function AdminDashboard() {
       launch_date: portfolioForm.launch_date,
       status: portfolioForm.status,
       is_published: Boolean(portfolioForm.is_published),
+      is_demo: Boolean(portfolioForm.is_demo),
       updated_at: new Date().toISOString(),
     };
     let id = portfolioForm.id;
@@ -206,6 +217,9 @@ export default function AdminDashboard() {
         monthly_objective: form.monthly_objective,
         investor_guidance_title: form.investor_guidance_title,
         investor_guidance: form.investor_guidance,
+        current_investor_guidance: form.current_investor_guidance || form.investor_guidance,
+        new_investor_guidance: form.new_investor_guidance || form.investor_guidance,
+        is_demo: Boolean(form.is_demo),
         is_published: Boolean(publish || close),
         is_closed: Boolean(close || form.is_closed),
         final_portfolio_return: close ? Number(metrics.portfolioReturn.toFixed(8)) : form.final_portfolio_return,
@@ -275,13 +289,43 @@ export default function AdminDashboard() {
     }
   };
 
-  const deleteDraft = async () => {
-    if (!form.id || form.is_published) return;
-    if (!window.confirm(isArabic ? "هل تريد حذف هذه المسودة؟" : "Delete this draft?")) return;
-    const { error } = await supabase.from("strategy_months").delete().eq("id", form.id);
+  const deleteMonth = async () => {
+    if (!isSuperAdmin || !form.id) return;
+    const label = monthLabel(form.month_key, false, locale);
+    const confirmed = window.confirm(isArabic
+      ? `تحذير واضح: سيتم حذف شهر ${label} نهائيًا بكل الأسهم والتغييرات واللقطات المرتبطة به. لا يمكن التراجع. هل تؤكد الحذف؟`
+      : `Clear warning: ${label} and all related holdings, changes and snapshots will be permanently deleted. This cannot be undone. Confirm deletion?`);
+    if (!confirmed) return;
+    const { error } = await supabase.rpc("delete_strategy_month", { p_month_id: form.id });
     if (error) return setMessage(error.message);
-    setMessage(isArabic ? "تم حذف المسودة" : "Draft deleted.");
+    setMessage(isArabic ? "تم حذف الشهر بالكامل بواسطة Super Admin" : "Month permanently deleted by Super Admin.");
     await loadData({ preferredPortfolioId: selectedPortfolioId });
+  };
+
+  const deletePortfolio = async () => {
+    if (!isSuperAdmin || !currentPortfolio?.id) return;
+    const count = portfolioMonths.length;
+    const confirmed = window.confirm(isArabic
+      ? `تحذير شديد: سيتم حذف محفظة ${currentPortfolio.name} بالكامل مع ${count} شهر وكل الأسهم والتغييرات واللقطات. لا يمكن التراجع. هل تؤكد؟`
+      : `Critical warning: ${currentPortfolio.name} will be permanently deleted with ${count} month(s), holdings, changes and snapshots. This cannot be undone. Confirm?`);
+    if (!confirmed) return;
+    const { error } = await supabase.rpc("delete_portfolio_cascade", { p_portfolio_id: currentPortfolio.id });
+    if (error) return setMessage(error.message);
+    setShowPortfolioForm(false);
+    setMessage(isArabic ? "تم حذف المحفظة بالكامل بواسطة Super Admin" : "Portfolio permanently deleted by Super Admin.");
+    await loadData();
+  };
+
+  const deleteDemoData = async () => {
+    if (!isSuperAdmin) return;
+    const confirmed = window.confirm(isArabic
+      ? "سيتم حذف كل السجلات المحددة كبيانات تجريبية فقط من المحافظ والشهور والتوصيات والتقارير. البيانات الحقيقية لن تُمس. هل تؤكد؟"
+      : "All records explicitly marked as demo data will be deleted from portfolios, months, recommendations and reports. Real data will not be touched. Confirm?" );
+    if (!confirmed) return;
+    const { data, error } = await supabase.rpc("delete_demo_data");
+    if (error) return setMessage(error.message);
+    setMessage(isArabic ? `تم تنظيف البيانات التجريبية بنجاح: ${JSON.stringify(data)}` : `Demo data cleaned successfully: ${JSON.stringify(data)}`);
+    await loadData();
   };
 
   if (!form) return <div className="loading-screen"><div className="loader-ring"/><p>{t("loading")}</p></div>;
@@ -320,7 +364,8 @@ export default function AdminDashboard() {
           <header className="admin-top-v21">
             <div><span className="eyebrow">{t("adminCentre")}</span><h1>{currentPortfolio ? (isArabic && currentPortfolio.name_ar ? currentPortfolio.name_ar : currentPortfolio.name) : (isArabic ? "المحافظ" : "Portfolios")}</h1><p>{form.id ? monthLabel(form.month_key, false, locale) : (isArabic ? "شهر جديد" : "New month")}</p></div>
             <div className="admin-actions-v21">
-              {!form.is_published && form.id && <button className="button danger" onClick={deleteDraft}><Trash2 size={15}/></button>}
+              {isSuperAdmin && form.id && <button className="button danger" onClick={deleteMonth} title={isArabic ? "حذف الشهر نهائيًا" : "Permanently delete month"}><Trash2 size={15}/></button>}
+              <button className="button subtle" disabled={!form?.holdings?.length} onClick={() => setReportOpen(true)}><FileText size={16}/>Generate Portfolio Report</button>
               <button className="button subtle" disabled={saving || !selectedPortfolioId} onClick={() => persistMonth({ publish: false })}><Save size={16}/>{t("saveDraft")}</button>
               <button className="button gold" disabled={saving || !selectedPortfolioId} onClick={() => persistMonth({ publish: true })}><Send size={16}/>{t("publishUpdate")}</button>
               <button className="button green" disabled={saving || form.is_closed || !selectedPortfolioId} onClick={() => persistMonth({ publish: true, close: true })}>{t("closeMonth")}</button>
@@ -340,9 +385,9 @@ export default function AdminDashboard() {
               <label>{isArabic ? "الحالة" : "Status"}<select value={portfolioForm.status} onChange={(e) => setPortfolioForm({ ...portfolioForm, status: e.target.value })}><option value="draft">Draft</option><option value="live">Live</option><option value="closed">Closed</option></select></label>
               <label className="wide">{isArabic ? "الوصف بالإنجليزي" : "Description"}<textarea rows="3" value={portfolioForm.description || ""} onChange={(e) => setPortfolioForm({ ...portfolioForm, description: e.target.value })}/></label>
               <label className="wide">{isArabic ? "الوصف بالعربي" : "Arabic description"}<textarea rows="3" value={portfolioForm.description_ar || ""} onChange={(e) => setPortfolioForm({ ...portfolioForm, description_ar: e.target.value })}/></label>
-              <label className="check-label-v22"><input type="checkbox" checked={Boolean(portfolioForm.is_published)} onChange={(e) => setPortfolioForm({ ...portfolioForm, is_published: e.target.checked })}/>{isArabic ? "إظهار المحفظة للأعضاء" : "Publish portfolio to members"}</label>
+              <label className="check-label-v22"><input type="checkbox" checked={Boolean(portfolioForm.is_published)} onChange={(e) => setPortfolioForm({ ...portfolioForm, is_published: e.target.checked })}/>{isArabic ? "إظهار المحفظة للأعضاء" : "Publish portfolio to members"}</label><label className="check-label-v22"><input type="checkbox" checked={Boolean(portfolioForm.is_demo)} onChange={(e) => setPortfolioForm({ ...portfolioForm, is_demo: e.target.checked })}/>{isArabic ? "تمييز كبيانات تجريبية" : "Mark as demo data"}</label>
             </div>
-            <button className="button gold" onClick={savePortfolio}><Save size={15}/>{isArabic ? "حفظ المحفظة" : "Save portfolio"}</button>
+            <div className="editor-buttons-v22"><button className="button gold" onClick={savePortfolio}><Save size={15}/>{isArabic ? "حفظ المحفظة" : "Save portfolio"}</button>{isSuperAdmin && portfolioForm.id && <button className="button danger" onClick={deletePortfolio}><Trash2 size={15}/>{isArabic ? "حذف المحفظة بالكامل" : "Delete full portfolio"}</button>}</div>
           </section>}
 
           <section className="admin-summary-grid-v21">
@@ -368,6 +413,9 @@ export default function AdminDashboard() {
                 <label className="wide">{t("monthlyObjective")}<textarea rows="3" value={form.monthly_objective || ""} onChange={(e) => setForm({ ...form, monthly_objective: e.target.value })}/></label>
                 <label>{t("guidanceTitle")}<input value={form.investor_guidance_title || ""} onChange={(e) => setForm({ ...form, investor_guidance_title: e.target.value })}/></label>
                 <label className="wide">{t("guidance")}<textarea rows="4" value={form.investor_guidance || ""} onChange={(e) => setForm({ ...form, investor_guidance: e.target.value })}/></label>
+                <label className="wide">{isArabic ? "تعليمات المستثمر الحالي" : "Existing investor guidance"}<textarea rows="4" value={form.current_investor_guidance || ""} onChange={(e) => setForm({ ...form, current_investor_guidance: e.target.value })}/></label>
+                <label className="wide">{isArabic ? "تعليمات المستثمر الجديد" : "New investor guidance"}<textarea rows="4" value={form.new_investor_guidance || ""} onChange={(e) => setForm({ ...form, new_investor_guidance: e.target.value })}/></label>
+                <label className="check-label-v22"><input type="checkbox" checked={Boolean(form.is_demo)} onChange={(e) => setForm({ ...form, is_demo: e.target.checked })}/>{isArabic ? "هذا الشهر بيانات تجريبية" : "This month is demo data"}</label>
               </div>
             </article>
 
@@ -408,6 +456,30 @@ export default function AdminDashboard() {
               </div>
             </article>
 
+            <article className="panel-v21 padded-v21 transparency-panel-v231">
+              <div className="panel-heading-v21"><div><span className="eyebrow">TRANSPARENCY</span><h2>{isArabic ? "بيانات الإنشاء وآخر تعديل" : "Creation and last modification"}</h2></div><span className={`status-pill ${isSuperAdmin ? "live" : "draft"}`}>{isSuperAdmin ? "SUPER ADMIN" : "ADMIN"}</span></div>
+              <h3 className="audit-subtitle-v231">{isArabic ? "المحفظة" : "Portfolio"}</h3>
+              <div className="audit-metadata-grid-v231">
+                <Meta label="Created At" value={dateTimeLabel(currentPortfolio?.created_at, locale)}/>
+                <Meta label="Last Updated" value={dateTimeLabel(currentPortfolio?.updated_at, locale)}/>
+                <Meta label="Created By" value={profileName(members, currentPortfolio?.created_by)}/>
+                <Meta label="Updated By" value={profileName(members, currentPortfolio?.updated_by)}/>
+              </div>
+              <h3 className="audit-subtitle-v231">{isArabic ? "الشهر المحدد" : "Selected month"}</h3>
+              <div className="audit-metadata-grid-v231">
+                <Meta label="Created At" value={dateTimeLabel(form.created_at, locale)}/>
+                <Meta label="Last Updated" value={dateTimeLabel(form.updated_at, locale)}/>
+                <Meta label="Created By" value={profileName(members, form.created_by)}/>
+                <Meta label="Updated By" value={profileName(members, form.updated_by)}/>
+              </div>
+              {isSuperAdmin && <button className="button danger" onClick={deleteDemoData}><ShieldAlert size={15}/>{isArabic ? "حذف كل البيانات التجريبية" : "Delete all demo data"}</button>}
+            </article>
+
+            <article className="panel-v21 activity-panel-v231">
+              <div className="panel-heading-v21"><div><span className="eyebrow">ACTIVITY LOG</span><h2>{isArabic ? "سجل التعديلات" : "Activity log"}</h2><p>{isArabic ? "آخر العمليات مع اسم المستخدم ونوع العملية وتاريخها." : "Latest operations with user, action and timestamp."}</p></div><History size={20}/></div>
+              <div className="activity-list-v231">{activities.slice(0, 30).map((activity) => <div key={activity.id}><span className={`activity-action-v231 ${String(activity.action).toLowerCase()}`}>{activity.action}</span><b>{activity.actor_name || activity.actor_email || "System"}</b><span>{activity.entity_type}{activity.entity_label ? ` · ${activity.entity_label}` : ""}</span><small>{dateTimeLabel(activity.occurred_at, locale)}</small></div>)}{!activities.length && <p className="muted-copy-v21">{isArabic ? "سيظهر السجل بعد تشغيل ملف SQL وتنفيذ أول تعديل." : "The log will appear after the SQL upgrade and the first change."}</p>}</div>
+            </article>
+
             <article className="panel-v21 members-panel-v21">
               <div className="panel-heading-v21"><div><span className="eyebrow">AUDIENCE</span><h2>{t("members")}</h2></div><span className="status-pill live">{newsletterMembers.length} EMAIL</span></div>
               <div className="table-scroll">
@@ -420,6 +492,7 @@ export default function AdminDashboard() {
           </section>
         </main>
       </div>
+      <PortfolioReportStudio open={reportOpen} onClose={() => setReportOpen(false)} portfolio={currentPortfolio} month={form} months={portfolioMonths} isArabic={isArabic} locale={locale} onMessage={setMessage}/>
     </div>
   );
 }
@@ -439,4 +512,14 @@ function changeSwap(setForm, form, index, field, value) {
 
 function Summary({ icon, label, value, tone }) {
   return <article className={`admin-summary-v21 ${tone}`}><span>{icon}</span><div><small>{label}</small><b>{value}</b></div></article>;
+}
+
+function Meta({ label, value }) {
+  return <div><small>{label}</small><b>{value || "—"}</b></div>;
+}
+
+function profileName(profiles, id) {
+  if (!id) return "—";
+  const found = profiles.find((item) => item.id === id);
+  return found?.full_name || found?.email || id;
 }

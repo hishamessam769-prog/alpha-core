@@ -4,7 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 import KpiCard from "../components/KpiCard";
 import { useLanguage } from "../context/LanguageContext";
-import { formatNumber, formatPercent } from "../lib/calculations";
+import { dateTimeLabel, formatNumber, formatPercent } from "../lib/calculations";
 import { recommendationActionLabel, recommendationMetrics, recommendationStatusLabel, splitResearchPoints } from "../lib/recommendations";
 import { supabase } from "../lib/supabase";
 
@@ -72,7 +72,7 @@ export default function IdeaDetail() {
           <div className="research-detail-meta-v22">
             <span><CalendarDays size={16}/><small>{isArabic ? "تاريخ التوصية" : "Recommendation date"}</small><b>{new Date(`${item.recommendation_date}T12:00:00`).toLocaleDateString(locale)}</b></span>
             <span><Clock3 size={16}/><small>{isArabic ? "مدة التوصية" : "Duration"}</small><b>{metrics.durationDays} {isArabic ? "يوم" : "days"}</b></span>
-            <span><Gauge size={16}/><small>{isArabic ? "آخر تحديث أسعار" : "Last price update"}</small><b>{metrics.priceDate ? new Date(`${metrics.priceDate}T12:00:00`).toLocaleDateString(locale) : "—"}</b></span>
+            <span><Gauge size={16}/><small>{isArabic ? "آخر تحديث أسعار" : "Last price update"}</small><b>{metrics.priceDate ? new Date(`${metrics.priceDate}T12:00:00`).toLocaleDateString(locale) : "—"}</b></span><span><Clock3 size={16}/><small>{isArabic ? "آخر تحديث للتوصية" : "Recommendation last updated"}</small><b>{dateTimeLabel(item.updated_at, locale)}</b></span>
           </div>
         </section>
 

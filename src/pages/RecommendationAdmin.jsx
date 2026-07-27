@@ -3,7 +3,7 @@ import { Archive, Eye, Plus, Save, Send, Target, Trash2, TrendingUp } from "luci
 import DashboardHeader from "../components/DashboardHeader";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
-import { formatNumber, formatPercent } from "../lib/calculations";
+import { dateTimeLabel, formatNumber, formatPercent } from "../lib/calculations";
 import { recommendationActionLabel, recommendationMetrics, recommendationStatusLabel } from "../lib/recommendations";
 import { supabase } from "../lib/supabase";
 
@@ -31,6 +31,7 @@ const blankRecommendation = () => ({
   risks: "",
   valuation: "",
   is_published: false,
+  is_demo: false,
 });
 
 export default function RecommendationAdmin() {
@@ -45,16 +46,19 @@ export default function RecommendationAdmin() {
   const [newUpdate, setNewUpdate] = useState({ update_date: today(), title: "", body: "" });
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [profiles, setProfiles] = useState([]);
 
   const load = async (preferredId) => {
-    const [{ data: recs, error: recError }, { data: priceRows, error: priceError }] = await Promise.all([
+    const [{ data: recs, error: recError }, { data: priceRows, error: priceError }, { data: profileRows, error: profileError }] = await Promise.all([
       supabase.from("recommendations").select("*").order("recommendation_date", { ascending: false }),
       supabase.from("market_prices").select("ticker, company_name, close_price, price_date"),
+      supabase.from("profiles").select("id, full_name, email, is_super_admin"),
     ]);
-    if (recError || priceError) setMessage(recError?.message || priceError?.message || "");
+    if (recError || priceError || profileError) setMessage(recError?.message || priceError?.message || profileError?.message || "");
     const rows = recs || [];
     const selected = rows.find((item) => item.id === preferredId) || rows.find((item) => item.id === selectedId) || rows[0];
     setRecommendations(rows);
+    setProfiles(profileRows || []);
     setPrices(Object.fromEntries((priceRows || []).map((row) => [String(row.ticker).toUpperCase(), row])));
     if (selected) {
       setSelectedId(selected.id);
@@ -76,6 +80,7 @@ export default function RecommendationAdmin() {
 
   useEffect(() => { load(); }, []);
 
+  const isSuperAdmin = Boolean(profile?.is_super_admin);
   const metrics = useMemo(() => recommendationMetrics(form, prices), [form, prices]);
   const currentStockPrice = prices[String(form.ticker || "").toUpperCase()];
   const currentBenchmarkPrice = prices[String(form.benchmark_ticker || "EGX30CAP").toUpperCase()];
@@ -123,6 +128,7 @@ export default function RecommendationAdmin() {
         risks: form.risks || "",
         valuation: form.valuation || "",
         is_published: Boolean(publish),
+        is_demo: Boolean(form.is_demo),
         updated_at: new Date().toISOString(),
       };
       let id = form.id;
@@ -170,12 +176,15 @@ export default function RecommendationAdmin() {
     await load(form.id);
   };
 
-  const deleteDraft = async () => {
-    if (!form.id || form.is_published) return;
-    if (!window.confirm(isArabic ? "حذف المسودة؟" : "Delete this draft?")) return;
-    const { error } = await supabase.from("recommendations").delete().eq("id", form.id);
+  const deleteRecommendation = async () => {
+    if (!isSuperAdmin || !form.id) return;
+    const confirmed = window.confirm(isArabic
+      ? `تحذير واضح: سيتم حذف توصية ${form.ticker} نهائيًا مع كل التحديثات المرتبطة بها. لا يمكن التراجع. هل تؤكد؟`
+      : `Clear warning: recommendation ${form.ticker} and its full update history will be permanently deleted. This cannot be undone. Confirm?`);
+    if (!confirmed) return;
+    const { error } = await supabase.rpc("delete_recommendation_cascade", { p_recommendation_id: form.id });
     if (error) return setMessage(error.message);
-    setMessage(isArabic ? "تم حذف المسودة" : "Draft deleted.");
+    setMessage(isArabic ? "تم حذف التوصية بالكامل بواسطة Super Admin" : "Recommendation permanently deleted by Super Admin.");
     await load();
   };
 
@@ -195,9 +204,15 @@ export default function RecommendationAdmin() {
     await loadUpdates(form.id);
   };
 
-  const deleteUpdate = async (id) => {
-    const { error } = await supabase.from("recommendation_updates").delete().eq("id", id);
+  const deleteUpdate = async (update) => {
+    if (!isSuperAdmin) return;
+    const confirmed = window.confirm(isArabic
+      ? `سيتم حذف تحديث "${update.title}" نهائيًا من سجل التوصية. لا يمكن التراجع. هل تؤكد؟`
+      : `Update "${update.title}" will be permanently deleted from the recommendation history. This cannot be undone. Confirm?`);
+    if (!confirmed) return;
+    const { error } = await supabase.rpc("delete_recommendation_update", { p_update_id: update.id });
     if (error) return setMessage(error.message);
+    setMessage(isArabic ? "تم حذف التحديث بواسطة Super Admin" : "Update deleted by Super Admin.");
     await loadUpdates(form.id);
   };
 
@@ -221,7 +236,7 @@ export default function RecommendationAdmin() {
           <header className="admin-top-v21">
             <div><span className="eyebrow">INDEPENDENT IDEA</span><h1>{form.ticker || (isArabic ? "توصية جديدة" : "New recommendation")}</h1><p>{isArabic ? "قرار حالي واضح مع مستهدف واحد خلال 12 شهر وأداء مقابل EGX30 Capped وسجل تحديثات." : "A clear current action, one 12-month target, EGX30 Capped performance and a permanent update log."}</p></div>
             <div className="admin-actions-v21">
-              {!form.is_published && form.id && <button className="button danger" onClick={deleteDraft}><Trash2 size={15}/></button>}
+              {isSuperAdmin && form.id && <button className="button danger" onClick={deleteRecommendation} title={isArabic ? "حذف التوصية بالكامل" : "Delete full recommendation"}><Trash2 size={15}/></button>}
               <button className="button subtle" disabled={saving} onClick={() => save({ publish: false, status: form.status === "draft" ? "draft" : form.status })}><Save size={16}/>{isArabic ? "حفظ مسودة" : "Save draft"}</button>
               <button className="button gold" disabled={saving} onClick={() => save({ publish: true, status: form.status === "draft" ? "open" : form.status })}><Send size={16}/>{isArabic ? "نشر التوصية" : "Publish"}</button>
               {form.id && form.status === "open" && <button className="button green" disabled={saving} onClick={() => closeAtLatest("closed")}><Archive size={16}/>{isArabic ? "إغلاق بالسعر الحالي" : "Close at latest"}</button>}
@@ -254,7 +269,7 @@ export default function RecommendationAdmin() {
                 <label>{isArabic ? "قيمة المؤشر عند البداية" : "Benchmark at entry"}<input type="number" step=".01" value={form.benchmark_entry} onChange={(e) => setForm({ ...form, benchmark_entry: Number(e.target.value) })}/></label>
                 <label>{isArabic ? "حالة السجل" : "Record status"}<select value={["draft","open"].includes(form.status) ? form.status : "open"} disabled={!(["draft","open"].includes(form.status))} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="draft">Draft</option><option value="open">Open</option></select></label>
                 <label>{isArabic ? "القرار الحالي للمستثمر" : "Current investor action"}<select value={form.action_status || "invest"} disabled={!(["draft","open"].includes(form.status))} onChange={(e) => setForm({ ...form, action_status: e.target.value })}><option value="invest">{recommendationActionLabel("invest", isArabic)}</option><option value="hold">{recommendationActionLabel("hold", isArabic)}</option></select></label>
-                <label>{isArabic ? "آخر تحديث سعر" : "Last price update"}<input value={currentStockPrice?.price_date || "—"} disabled/></label>
+                <label>{isArabic ? "آخر تحديث سعر" : "Last price update"}<input value={currentStockPrice?.price_date || "—"} disabled/></label><label className="check-label-v22"><input type="checkbox" checked={Boolean(form.is_demo)} onChange={(e) => setForm({ ...form, is_demo: e.target.checked })}/>{isArabic ? "تمييز كتوصية تجريبية" : "Mark as demo data"}</label>
               </div>
             </article>
 
@@ -269,6 +284,16 @@ export default function RecommendationAdmin() {
               </div>
             </article>
 
+            <article className="panel-v21 padded-v21 transparency-panel-v231">
+              <div className="panel-heading-v21"><div><span className="eyebrow">TRANSPARENCY</span><h2>{isArabic ? "سجل الإنشاء والتعديل" : "Creation and modification record"}</h2></div><span className={`status-pill ${isSuperAdmin ? "live" : "draft"}`}>{isSuperAdmin ? "SUPER ADMIN" : "ADMIN"}</span></div>
+              <div className="audit-metadata-grid-v231">
+                <Meta label="Created At" value={dateTimeLabel(form.created_at, locale)}/>
+                <Meta label="Last Updated" value={dateTimeLabel(form.updated_at, locale)}/>
+                <Meta label="Created By" value={profileName(profiles, form.created_by)}/>
+                <Meta label="Updated By" value={profileName(profiles, form.updated_by)}/>
+              </div>
+            </article>
+
             <article className="panel-v21 padded-v21">
               <div className="panel-heading-v21"><div><span className="eyebrow">UPDATES</span><h2>{isArabic ? "إضافة تحديث جديد" : "Add a company update"}</h2><p>{isArabic ? "النتائج أو الأخبار أو أي تغيير في الفرضية يضاف هنا ولا يمسح التحديثات القديمة." : "Results, news or thesis changes are added here without deleting old updates."}</p></div></div>
               <div className="admin-form-grid-v21 update-form-v22">
@@ -278,7 +303,7 @@ export default function RecommendationAdmin() {
               </div>
               <button className="button gold" onClick={addUpdate}><Plus size={15}/>{isArabic ? "إضافة التحديث" : "Add update"}</button>
               <div className="admin-update-list-v22">
-                {updates.map((update) => <article key={update.id}><div><small>{new Date(`${update.update_date}T12:00:00`).toLocaleDateString(locale)}</small><h3>{update.title}</h3><p>{update.body}</p></div><button className="icon-button" onClick={() => deleteUpdate(update.id)}><Trash2 size={15}/></button></article>)}
+                {updates.map((update) => <article key={update.id}><div><small>{new Date(`${update.update_date}T12:00:00`).toLocaleDateString(locale)}</small><h3>{update.title}</h3><p>{update.body}</p></div>{isSuperAdmin && <button className="icon-button" onClick={() => deleteUpdate(update)} title={isArabic ? "حذف التحديث" : "Delete update"}><Trash2 size={15}/></button>}</article>)}
               </div>
             </article>
 
@@ -295,4 +320,14 @@ export default function RecommendationAdmin() {
 
 function Summary({ label, value, tone }) {
   return <article className={`admin-summary-v21 ${tone}`}><span><TrendingUp/></span><div><small>{label}</small><b>{value}</b></div></article>;
+}
+
+function Meta({ label, value }) {
+  return <div><small>{label}</small><b>{value || "—"}</b></div>;
+}
+
+function profileName(profiles, id) {
+  if (!id) return "—";
+  const found = profiles.find((item) => item.id === id);
+  return found?.full_name || found?.email || id;
 }

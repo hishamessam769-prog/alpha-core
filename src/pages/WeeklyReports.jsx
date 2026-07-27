@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import DashboardHeader from "../components/DashboardHeader";
 import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
+import { dateTimeLabel } from "../lib/calculations";
 
 export default function WeeklyReports() {
   const { isArabic } = useLanguage();
@@ -48,7 +49,7 @@ export default function WeeklyReports() {
                 <span className="eyebrow">{isArabic ? "تقرير أسبوعي" : "WEEKLY REPORT"}</span>
                 <h2>{report.title}</h2>
                 <p>{report.summary}</p>
-                <footer><span>{isArabic ? "منشور" : "Published"} {report.published_at ? new Date(report.published_at).toLocaleDateString(locale) : ""}</span><b>{isArabic ? "قراءة التقرير" : "Read report"}<ArrowUpRight size={15}/></b></footer>
+                <footer><span>{isArabic ? "آخر تحديث" : "Last updated"} {dateTimeLabel(report.updated_at || report.published_at, locale)}</span><b>{isArabic ? "قراءة التقرير" : "Read report"}<ArrowUpRight size={15}/></b></footer>
               </Link>
             ))}
             {!reports.length && <div className="empty-state-v21"><Newspaper size={44}/><h2>{isArabic ? "أول تقرير أسبوعي قيد الإعداد" : "The first weekly report is being prepared"}</h2></div>}
