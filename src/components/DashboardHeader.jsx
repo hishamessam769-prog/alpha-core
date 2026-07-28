@@ -1,6 +1,8 @@
-import { Link } from "react-router-dom";
-import { FileSpreadsheet, Lightbulb, LogOut, Newspaper, Settings, ShieldCheck, WalletCards } from "lucide-react";
+import { useState } from "react";
+import { BarChart3, ChevronDown, FileSpreadsheet, Lightbulb, LogOut, Menu, Newspaper, Settings, ShieldCheck, UserRound, WalletCards, X } from "lucide-react";
+import { Link, NavLink } from "react-router-dom";
 import Brand from "./Brand";
+import GlobalSearch from "./GlobalSearch";
 import LanguageToggle from "./LanguageToggle";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
@@ -8,26 +10,33 @@ import { useLanguage } from "../context/LanguageContext";
 export default function DashboardHeader({ admin = false }) {
   const { profile, signOut } = useAuth();
   const { t, isArabic } = useLanguage();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const close = () => setMenuOpen(false);
 
   return (
-    <header className="dashboard-header">
+    <header className="dashboard-header platform-header">
       <Brand to={admin ? "/admin" : "/dashboard"} />
-      <nav className="dashboard-nav">
-        {!admin && <Link to="/dashboard"><WalletCards size={14}/>{isArabic ? "المحافظ" : "Portfolios"}</Link>}
-        {!admin && <Link to="/recommendations"><Lightbulb size={14}/>{isArabic ? "توصيات مستقلة" : "Independent recommendations"}</Link>}
-        {!admin && <Link to="/weekly-reports"><Newspaper size={14}/>{isArabic ? "تقارير أسبوعية" : "Weekly reports"}</Link>}
-        {!admin && <Link to="/methodology">{t("navMethodology")}</Link>}
+      <nav className={`dashboard-nav platform-nav ${menuOpen ? "open" : ""}`}>
+        {!admin && <NavLink to="/dashboard" onClick={close}><WalletCards size={15}/>{isArabic ? "المحافظ" : "Portfolio"}</NavLink>}
+        {!admin && <NavLink to="/recommendations" onClick={close}><Lightbulb size={15}/>{isArabic ? "التوصيات" : "Recommendations"}</NavLink>}
+        {!admin && <NavLink to="/recommendations" onClick={close}><BarChart3 size={15}/>{isArabic ? "الأبحاث" : "Research"}</NavLink>}
+        {!admin && <NavLink to="/weekly-reports" onClick={close}><Newspaper size={15}/>{isArabic ? "التقارير" : "Weekly Reports"}</NavLink>}
+        {!admin && <NavLink to="/methodology" onClick={close}>{isArabic ? "الرؤى" : "Insights"}</NavLink>}
 
-        {admin && <Link to="/admin"><ShieldCheck size={14}/>{isArabic ? "المحافظ" : "Portfolios"}</Link>}
-        {admin && <Link to="/admin/recommendations"><Lightbulb size={14}/>{isArabic ? "التوصيات المستقلة" : "Independent recommendations"}</Link>}
-        {admin && <Link to="/admin/weekly-reports"><Newspaper size={14}/>{isArabic ? "التقارير الأسبوعية" : "Weekly reports"}</Link>}
-        {admin && <Link to="/admin/prices"><FileSpreadsheet size={14}/>{isArabic ? "تحديث الأسعار" : "Price import"}</Link>}
-        {admin && <Link to="/dashboard">{t("viewMember")}</Link>}
-
-        <LanguageToggle compact />
-        <Link className="member-name" to="/profile"><Settings size={14}/>{profile?.full_name || profile?.email}</Link>
-        <button className="icon-button" type="button" onClick={signOut} title={t("logout")}><LogOut size={17}/></button>
+        {admin && <NavLink to="/admin" onClick={close}><ShieldCheck size={15}/>{isArabic ? "المحافظ" : "Portfolios"}</NavLink>}
+        {admin && <NavLink to="/admin/recommendations" onClick={close}><Lightbulb size={15}/>{isArabic ? "التوصيات" : "Recommendations"}</NavLink>}
+        {admin && <NavLink to="/admin/weekly-reports" onClick={close}><Newspaper size={15}/>{isArabic ? "التقارير" : "Reports"}</NavLink>}
+        {admin && <NavLink to="/admin/prices" onClick={close}><FileSpreadsheet size={15}/>{isArabic ? "الأسعار" : "Price Data"}</NavLink>}
+        {admin && <NavLink to="/dashboard" onClick={close}>{t("viewMember")}</NavLink>}
+        <div className="mobile-nav-actions"><LanguageToggle compact/><Link className="button subtle full" to="/profile" onClick={close}><Settings size={15}/>{isArabic ? "إعدادات الحساب" : "Account settings"}</Link><button className="button danger full" type="button" onClick={signOut}><LogOut size={15}/>{t("logout")}</button></div>
       </nav>
+      <div className="header-actions dashboard-actions">
+        <GlobalSearch compact />
+        <LanguageToggle compact />
+        <Link className="profile-trigger" to="/profile"><span className="profile-avatar"><UserRound size={15}/></span><span><b>{profile?.full_name || profile?.email}</b><small>{profile?.is_super_admin ? "SUPER ADMIN" : profile?.is_admin ? "ADMIN" : "MEMBER"}</small></span><ChevronDown size={13}/></Link>
+        <button className="icon-button logout-button" type="button" onClick={signOut} title={t("logout")}><LogOut size={17}/></button>
+        <button className="mobile-menu-trigger" type="button" onClick={() => setMenuOpen((current) => !current)}>{menuOpen ? <X size={20}/> : <Menu size={20}/>}</button>
+      </div>
     </header>
   );
 }

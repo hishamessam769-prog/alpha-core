@@ -1,0 +1,22 @@
+ALPHA PLATFORM V3.0 — COMPLETE UI/UX REDESIGN
+
+نوع التحديث
+- إعادة تصميم كاملة للواجهة وتجربة الاستخدام فقط.
+- لا توجد أي تغييرات على قاعدة البيانات أو ملفات Supabase أو صلاحيات RLS.
+- لم يتم تغيير routes أو authentication أو الحسابات أو منطق المحافظ والتوصيات والتقارير.
+
+أهم التحسينات
+- Design System مؤسسي Dark Theme مناسب لمنصة استثمار احترافية.
+- Header ثابت ومتجاوب مع Global Search عبر Cmd/Ctrl + K.
+- Landing Page جديدة تشمل Hero وأداء توضيحي وأبحاث وتقارير وأسعار وFooter احترافي.
+- Dashboard تنفيذي يجمع KPIs والأداء والتوزيع وأحدث الأبحاث والتقارير والنشاط.
+- Portfolio Factsheet وHolding Cards مع الاحتفاظ بالجداول وسجل الأداء والتصدير PDF.
+- Recommendations Magazine مع بحث وفلترة وترتيب وFeatured Recommendation.
+- Recommendation Detail أقوى: قرار المحلل والأسعار والفرضية والمحفزات والمخاطر والتقييم والـtimeline وAnalyst Profile.
+- Weekly Reports بتصميم Timeline مع Featured Report وصفحة تقرير قابلة للتصدير PDF.
+- AI Brief drawers قابلة للنسخ للمحفظة والتوصية والتقرير.
+- تحسين Admin Panel بصريًا فقط مع الحفاظ على كل عمليات الإدخال والحذف والتقارير الحالية.
+- Animations وSkeletons وHover states وResponsive كامل.
+
+ملاحظة
+أي بيانات غير موجودة حاليًا في قاعدة البيانات مثل صورة المحلل أو EGX70 Alpha تظهر بشكل اختياري أو بعلامة — بدون إنشاء أعمدة أو تغيير schema.

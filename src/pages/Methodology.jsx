@@ -1,5 +1,6 @@
 import { ArrowRight, BarChart3, CheckCircle2, Layers3, LockKeyhole, RefreshCcw, Search, Target } from "lucide-react";
 import { Link } from "react-router-dom";
+import PlatformFooter from "../components/PlatformFooter";
 import PublicHeader from "../components/PublicHeader";
 import { useLanguage } from "../context/LanguageContext";
 
@@ -63,6 +64,7 @@ export default function Methodology() {
           <Link className="button gold large" to="/signup">{t("signup")} <ArrowRight size={16}/></Link>
         </section>
       </main>
+      <PlatformFooter />
     </div>
   );
 }

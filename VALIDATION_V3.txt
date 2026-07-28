@@ -1,0 +1,20 @@
+ALPHA PLATFORM V3.0 - VALIDATION
+
+Scope
+- UI/UX redesign applied to the existing V2.3.1 project.
+- Backend, database schema, Supabase functions, routes, authentication, permissions,
+  calculations, exports, reporting logic and business workflows were preserved.
+
+Automated static checks
+- JS/JSX syntax: passed (36 files).
+- Relative imports: passed (122 imports).
+- CSS brace integrity: passed.
+- Route inventory: unchanged.
+- Supabase directory: byte-for-byte unchanged from V2.3.1.
+- Core business/auth files: byte-for-byte unchanged from V2.3.1.
+- Existing V2.3.1 SQL SHA-256:
+  432cb864cffca058152c400cab11aa8441ac8aaa71fa8fa0e1b7a7ef60bc5774
+
+Environment limitation
+- A full npm production build could not be executed because this runtime could not
+  resolve the npm registry and did not contain the project's dependencies locally.

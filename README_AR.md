@@ -1,25 +1,28 @@
-# ALPHA CORE V2.3.1
+# ALPHA PLATFORM V3.0
 
-تحديث آمن فوق V2.3 ويحافظ على نفس مشروع Supabase ونفس المستخدمين والمحافظ والتوصيات والتقارير والبيانات الحالية.
-
-## أهم الإضافات
-- صلاحية Super Admin مستقلة وحذف نهائي محمي بتأكيد واضح.
-- حذف محفظة كاملة أو شهر أو توصية أو تقرير أسبوعي أو تحديث توصية.
-- تنظيف البيانات المحددة كبيانات تجريبية فقط.
-- Created At وLast Updated وUpdated By.
-- Activity Log باسم المستخدم ونوع العملية وتاريخها.
-- Portfolio Report احترافي يومي أو أسبوعي أو شهري.
-- AI Summary قابل للنسخ.
-- Marketing Package بصيغة ZIP يحتوي PDF وAI Summary وSocial Media Copy.
-- إظهار آخر تحديث للأعضاء في المحافظ والتوصيات والتقارير.
-
-## طريقة التحديث
-1. شغّل ملف `supabase/upgrade-v2.3.1.sql` مرة واحدة في نفس مشروع Supabase الحالي.
-2. ارفع محتويات المشروع على نفس GitHub Repository بدل الملفات الحالية.
-3. حافظ على متغيرات البيئة الحالية في Vercel: `VITE_SUPABASE_URL` و`VITE_SUPABASE_ANON_KEY`.
-4. Vercel سيعمل Deploy تلقائيًا.
+هذه النسخة هي إعادة تصميم كاملة للواجهة وتجربة الاستخدام فوق ALPHA CORE V2.3.1.
 
 ## مهم
-- لا تشغّل Reset ولا تنشئ مشروع Supabase جديد.
-- الحذف لا يظهر ولا يعمل إلا للحساب المحدد Super Admin.
-- زر حذف البيانات التجريبية يحذف فقط السجلات التي تم تمييزها `is_demo = true`.
+- لا تشغّل أي SQL جديد: قاعدة البيانات لم تتغير.
+- استخدم نفس متغيرات Supabase الموجودة في Vercel.
+- ارفع ملفات المشروع إلى GitHub ثم اعمل Deploy أو Redeploy على Vercel.
+- كل الجداول والصلاحيات والعمليات والحسابات والتصدير والتقارير الموجودة في V2.3.1 محفوظة.
+
+## التشغيل المحلي
+```bash
+npm install
+npm run dev
+```
+
+## البناء
+```bash
+npm run build
+```
+
+## الملفات الأساسية التي تغيرت
+- `src/styles.css`
+- Headers والبحث العالمي
+- Landing / Dashboard / Recommendations / Weekly Reports
+- مكونات AI Brief وCompany Mark وFooter
+
+راجع `RELEASE_NOTES_V3_AR.txt` لتفاصيل التحديث.

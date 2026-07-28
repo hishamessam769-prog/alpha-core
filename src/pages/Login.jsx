@@ -40,7 +40,7 @@ export default function Login() {
         <section className="auth-story-v21">
           <div className="auth-story-top"><Brand/><LanguageToggle compact/></div>
           <div>
-            <span className="eyebrow">ALPHA CORE MEMBER TERMINAL</span>
+            <span className="eyebrow">ALPHA PLATFORM MEMBER TERMINAL</span>
             <h1>{t("authWelcome")}</h1>
             <p>{t("authText")}</p>
             <div className="auth-benefits">
@@ -49,7 +49,7 @@ export default function Login() {
               <span><ShieldCheck/>{t("trackRecord")}</span>
             </div>
           </div>
-          <small>ALPHA CORE V2.1</small>
+          <small>ALPHA PLATFORM V3.0</small>
         </section>
         <section className="auth-card-v21">
           <span className="eyebrow">{t("login")}</span>

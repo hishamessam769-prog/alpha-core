@@ -1,8 +1,9 @@
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Legend,
   Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -16,20 +17,20 @@ export default function PerformanceChart({ data = [] }) {
   return (
     <div className="performance-chart" role="img" aria-label={t("performanceOverview")}>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 18, right: 14, left: -8, bottom: 4 }}>
-          <CartesianGrid stroke="rgba(255,255,255,.055)" vertical={false} />
-          <XAxis dataKey="label" tick={{ fill: "#788596", fontSize: 10 }} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={(value) => `${value}%`} tick={{ fill: "#788596", fontSize: 10 }} axisLine={false} tickLine={false} width={48} />
-          <Tooltip
-            contentStyle={{ background: "#111820", border: "1px solid #2b3541", borderRadius: 12, color: "#f6f8fb" }}
-            labelStyle={{ color: "#c5a059", fontWeight: 800, marginBottom: 7 }}
-            formatter={(value, name) => [formatPercent(value), name]}
-          />
-          <Legend wrapperStyle={{ fontSize: 10, color: "#94a0af" }} />
-          <Line name={t("cumulativePortfolio")} type="monotone" dataKey="cumulativePortfolio" stroke="#1ec8e5" strokeWidth={3} dot={{ r: 3, fill: "#1ec8e5" }} activeDot={{ r: 5 }} />
-          <Line name={t("cumulativeBenchmark")} type="monotone" dataKey="cumulativeBenchmark" stroke="#c5a059" strokeWidth={2.5} dot={{ r: 3, fill: "#c5a059" }} activeDot={{ r: 5 }} />
-          <Line name={t("cumulativeAlpha")} type="monotone" dataKey="cumulativeAlpha" stroke="#e8edf4" strokeWidth={2} dot={{ r: 2.5, fill: "#e8edf4" }} activeDot={{ r: 4 }} />
-        </LineChart>
+        <ComposedChart data={data} margin={{ top: 24, right: 18, left: -4, bottom: 6 }}>
+          <defs>
+            <linearGradient id="portfolioAreaV3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#37b7ff" stopOpacity=".26"/><stop offset="88%" stopColor="#37b7ff" stopOpacity="0"/></linearGradient>
+          </defs>
+          <CartesianGrid stroke="rgba(255,255,255,.055)" vertical={false} strokeDasharray="4 6" />
+          <XAxis dataKey="label" tick={{ fill: "#738196", fontSize: 10 }} axisLine={false} tickLine={false} minTickGap={24}/>
+          <YAxis tickFormatter={(value) => `${value}%`} tick={{ fill: "#738196", fontSize: 10 }} axisLine={false} tickLine={false} width={48}/>
+          <Tooltip cursor={{ stroke: "rgba(197,160,89,.32)", strokeDasharray: "4 4" }} contentStyle={{ background: "rgba(15,21,29,.97)", border: "1px solid #2a3544", borderRadius: 14, color: "#f6f8fb", boxShadow: "0 24px 70px rgba(0,0,0,.45)" }} labelStyle={{ color: "#d7b66f", fontWeight: 800, marginBottom: 8 }} formatter={(value, name) => [formatPercent(value), name]}/>
+          <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 10, color: "#94a0af", paddingTop: 12 }}/>
+          <Area name={t("cumulativePortfolio")} type="monotone" dataKey="cumulativePortfolio" fill="url(#portfolioAreaV3)" stroke="none" animationDuration={1000}/>
+          <Line name={t("cumulativePortfolio")} type="monotone" dataKey="cumulativePortfolio" stroke="#37b7ff" strokeWidth={3} dot={false} activeDot={{ r: 5, strokeWidth: 3, stroke: "#0b0f14" }} animationDuration={1100}/>
+          <Line name={t("cumulativeBenchmark")} type="monotone" dataKey="cumulativeBenchmark" stroke="#c5a059" strokeWidth={2.2} dot={false} activeDot={{ r: 4 }} animationDuration={1200}/>
+          <Line name={t("cumulativeAlpha")} type="monotone" dataKey="cumulativeAlpha" stroke="#f2f5f8" strokeWidth={1.6} strokeDasharray="5 5" dot={false} activeDot={{ r: 4 }} animationDuration={1300}/>
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );
