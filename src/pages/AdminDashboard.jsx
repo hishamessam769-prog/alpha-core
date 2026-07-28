@@ -13,6 +13,7 @@ const makeHolding = (index) => ({
   weight: 20,
   open_price: 0,
   close_price: 0,
+  investment_thesis: "",
   sort_order: index,
 });
 
@@ -176,7 +177,11 @@ export default function AdminDashboard() {
       ...current,
       holdings: current.holdings.map((holding, currentIndex) => currentIndex === index ? {
         ...holding,
-        [field]: field === "ticker" ? value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12) : Number(value),
+        [field]: field === "ticker"
+          ? value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12)
+          : ["weight", "open_price", "close_price"].includes(field)
+            ? Number(value)
+            : value,
       } : holding),
     }));
   };
@@ -250,6 +255,7 @@ export default function AdminDashboard() {
           weight: Number(holding.weight),
           open_price: Number(holding.open_price),
           close_price: Number(holding.close_price),
+          investment_thesis: holding.investment_thesis || null,
           sort_order: index,
         }))
       );
@@ -423,7 +429,7 @@ export default function AdminDashboard() {
               <div className="panel-heading-v21"><div><span className="eyebrow">PORTFOLIO</span><h2>{t("officialPortfolio")}</h2><p>{isArabic ? "يمكن إضافة أو حذف أي عدد من الأسهم. مجموع الأوزان لازم يساوي 100%." : "Add or remove any number of holdings. Total weights must equal 100%."}</p></div><div className="editor-buttons-v22"><button className="button subtle compact" onClick={addHolding}><Plus size={14}/>{isArabic ? "سهم" : "Holding"}</button><button className="button subtle compact" onClick={equalise}>{t("equalise")}</button></div></div>
               <div className="table-scroll">
                 <table className="data-table-v21 admin-data-table">
-                  <thead><tr><th>{t("ticker")}</th><th>{t("weight")}</th><th>{t("open")}</th><th>{t("latest")}</th><th>{t("return")}</th><th>{t("contribution")}</th><th></th></tr></thead>
+                  <thead><tr><th>{t("ticker")}</th><th>{t("weight")}</th><th>{t("open")}</th><th>{t("latest")}</th><th>{t("return")}</th><th>{t("contribution")}</th><th>{isArabic ? "الفكرة الاستثمارية" : "Investment thesis"}</th><th></th></tr></thead>
                   <tbody>{form.holdings.map((holding, index) => {
                     const calculated = metrics.rows[index] || {};
                     return <tr key={holding.id || holding.local_id}>
@@ -433,6 +439,7 @@ export default function AdminDashboard() {
                       <td><input className="admin-table-input" type="number" step=".01" value={holding.close_price} onChange={(e) => updateHolding(index, "close_price", e.target.value)}/></td>
                       <td className={calculated.mtd >= 0 ? "positive" : "negative"}>{formatPercent(calculated.mtd)}</td>
                       <td className={calculated.contribution >= 0 ? "positive" : "negative"}>{formatPercent(calculated.contribution)}</td>
+                      <td><textarea className="admin-table-thesis-v31" rows="2" value={holding.investment_thesis || ""} onChange={(e) => updateHolding(index, "investment_thesis", e.target.value)} placeholder={isArabic ? "لماذا اخترنا هذا السهم؟" : "Why is this stock selected?"}/></td>
                       <td><button className="icon-button" onClick={() => removeHolding(index)}><Trash2 size={14}/></button></td>
                     </tr>;
                   })}</tbody>

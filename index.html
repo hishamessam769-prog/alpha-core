@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0b0f14" />
+    <script>
+      try {
+        const savedTheme = localStorage.getItem("alpha-platform-theme");
+        const theme = savedTheme === "light" ? "light" : "dark";
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      } catch (_) {}
+    </script>
     <meta name="description" content="ALPHA PLATFORM — transparent Egyptian equity strategy tracking versus EGX30 Capped." />
     <title>ALPHA PLATFORM</title>
   </head>

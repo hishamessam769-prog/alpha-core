@@ -1,29 +1,26 @@
-ALPHA CORE V2.3.1
-=================
+ALPHA PLATFORM V3.1 — INCREMENTAL EXPERIENCE UPDATE
 
-1) SUPER ADMIN DELETE CONTROL
-- حذف محفظة كاملة بكل الشهور والأسهم والتغييرات واللقطات.
-- حذف شهر معين مهما كانت حالته.
-- حذف توصية مستقلة مع سجل تحديثاتها.
-- حذف تقرير أسبوعي.
-- حذف تحديث معين داخل التوصية.
-- حذف البيانات المحددة كتجريبية فقط.
-- رسائل تأكيد واضحة قبل كل حذف.
-- الحماية مطبقة في الواجهة وRLS وRPC داخل Supabase.
+الحفاظ الكامل
+- جميع Routes القديمة محفوظة.
+- Authentication وProfiles وAdmin وSuper Admin محفوظة.
+- الحسابات وPortfolio Logic وRecommendation Logic محفوظة.
+- PDF Export وMarketing Package وActivity Log والحذف الآمن محفوظة.
+- ملفات الحسابات الأساسية لم تتغير.
 
-2) TRANSPARENCY
-- Created At وLast Updated وUpdated By.
-- Activity Log باسم المستخدم ونوع العملية وتاريخها.
-- آخر تحديث ظاهر للمستخدمين في المحافظ والتوصيات والتقارير.
+التحديثات
+1. Investment Thesis لكل Holding في Admin وMember Dashboard وPortfolio PDF.
+2. إصلاح Table Header overlap على Desktop وTablet وMobile.
+3. Admin Settings ديناميكية للشعار والفوتر والتواصل والأسعار والـLanding Highlights.
+4. Logo موحد في Header وFooter وكل تقارير PDF الرئيسية.
+5. Redirect تلقائي للمستخدم المسجل من Landing إلى Dashboard.
+6. Public performance highlights مبنية على أحدث بيانات منشورة.
+7. Copy Direct Link للمحفظة.
+8. Support chat للمستخدم وMessenger Inbox للإدارة.
+9. الرد داخل المنصة أو فتح البريد مع تسجيل الرد في Support History.
+10. Smart Survey 1–5 + تعليق، مع Admin Analytics.
+11. Light/Dark Mode محفوظ بين الجلسات.
 
-3) REPORT STUDIO
-- Portfolio Report يومي أو أسبوعي أو شهري.
-- جميع مؤشرات الأداء والتراكم والألفا.
-- جدول الأسهم والأوزان والأسعار والعائد.
-- أفضل وأسوأ سهم.
-- ملاحظات الاستراتيجية وتعليمات المستثمر الحالي والجديد.
-- PDF احترافي بعلامة ALPHA CORE وتنويه تعليمي وملحق نصي قابل للقراءة بأدوات AI.
-
-4) AI & MARKETING
-- Generate AI Summary مع نص قابل للنسخ.
-- Create Marketing Package ينتج ZIP واحد: PDF + AI Summary + Social Media Copy.
+قاعدة البيانات
+- Upgrade additive فقط.
+- لا توجد عمليات DROP أو إعادة تسمية للجداول الحالية.
+- RLS يمنع المستخدم من رؤية رسائل أي مستخدم آخر.

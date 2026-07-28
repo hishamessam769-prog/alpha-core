@@ -46,7 +46,7 @@ export default function Signup() {
               <span><ShieldCheck/>{t("trackRecord")}</span>
             </div>
           </div>
-          <small>ALPHA PLATFORM V3.0</small>
+          <small>ALPHA PLATFORM V3.1</small>
         </section>
         <section className="auth-card-v21">
           {complete ? (

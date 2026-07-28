@@ -1,0 +1,47 @@
+ALPHA PLATFORM V3.1 — VALIDATION REPORT
+
+Scope
+- Incremental enhancements applied over the supplied ALPHA PLATFORM V3.0 project.
+- No existing route, table, calculation, authentication flow, permission flow,
+  recommendation workflow, portfolio workflow or export workflow was removed.
+
+Automated static checks
+- JS/JSX syntax: PASSED — 43 files parsed with the TypeScript JSX parser.
+- Relative imports: PASSED — 160 internal imports resolved.
+- CSS lexical/brace integrity: PASSED.
+- SQL lexical balance: PASSED — comments, strings, dollar blocks and parentheses balanced.
+- Feature assertions: PASSED for Investment Thesis, table fix, settings, dynamic logo,
+  logged-in redirect, landing highlights, portfolio direct link, support inbox,
+  smart survey and persisted theme.
+
+Route preservation
+- 19/19 existing V3.0 routes preserved.
+- Additive routes only:
+  /portfolio/:slug
+  /admin/support
+  /admin/settings
+
+Core logic preservation
+The following files are byte-for-byte identical to V3.0:
+- src/context/AuthContext.jsx
+- src/lib/calculations.js
+- src/lib/recommendations.js
+- src/lib/reporting.js
+- src/lib/supabase.js
+- src/lib/zip.js
+- src/pages/RecommendationAdmin.jsx
+- src/pages/WeeklyReportsAdmin.jsx
+- src/pages/PriceImportAdmin.jsx
+
+Database safety
+- V3.1 SQL SHA-256: 1c6d5b686de54642d818bd97e178c2022d1744508c3f504f895a8187eceb18b1.
+- V3.1 SQL is additive.
+- No DROP TABLE or DROP COLUMN operations.
+- Existing V2.3.1 SQL remains unchanged in the source comparison.
+- New RLS separates each member's support history and restricts Admin data to Admin roles.
+
+Environment limitation
+- A complete npm production build could not be executed in this sandbox because
+  package installation could not reach/resolve the npm registry before timing out,
+  and node_modules were not available locally.
+- Syntax, import, CSS, route, feature, SQL-structure and archive-integrity checks were completed instead.

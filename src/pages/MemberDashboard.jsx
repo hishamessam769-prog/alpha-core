@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Activity, ArrowUpRight, BriefcaseBusiness, CalendarClock, CheckCircle2, Clock3, Download, FileText, Layers3, RefreshCw, ShieldCheck, Sparkles, Target, TrendingDown, TrendingUp, UsersRound } from "lucide-react";
+import { Activity, ArrowUpRight, BriefcaseBusiness, CalendarClock, Check, CheckCircle2, Clock3, Download, FileText, Layers3, Link2, RefreshCw, ShieldCheck, Sparkles, Target, TrendingDown, TrendingUp, UsersRound } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import Brand from "../components/Brand";
 import CompanyMark from "../components/CompanyMark";
 import DashboardHeader from "../components/DashboardHeader";
 import InsightDrawer from "../components/InsightDrawer";
@@ -47,6 +48,7 @@ async function loadPublishedData() {
 
 export default function MemberDashboard() {
   const reportRef = useRef(null);
+  const { slug } = useParams();
   const { t, isArabic } = useLanguage();
   const locale = isArabic ? "ar-EG" : "en-GB";
   const [portfolios, setPortfolios] = useState([]);
@@ -60,6 +62,7 @@ export default function MemberDashboard() {
   const [message, setMessage] = useState("");
   const [range, setRange] = useState("ALL");
   const [exporting, setExporting] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const refresh = async () => {
     try {
@@ -71,7 +74,8 @@ export default function MemberDashboard() {
       setReports(data.reports);
       setPrices(Object.fromEntries(data.priceRows.map((row) => [String(row.ticker).toUpperCase(), row])));
       setSelectedPortfolioId((current) => {
-        const portfolioId = data.portfolios.some((item) => item.id === current) ? current : data.portfolios[0]?.id || "";
+        const requestedPortfolio = slug ? data.portfolios.find((item) => item.slug === slug) : null;
+        const portfolioId = requestedPortfolio?.id || (data.portfolios.some((item) => item.id === current) ? current : data.portfolios[0]?.id || "");
         const portfolioMonths = data.months.filter((month) => month.portfolio_id === portfolioId);
         setSelectedKey((key) => portfolioMonths.some((month) => month.month_key === key) ? key : portfolioMonths.at(-1)?.month_key || "");
         return portfolioId;
@@ -124,6 +128,21 @@ export default function MemberDashboard() {
     setRange("ALL");
   };
 
+
+  const copyDirectLink = async () => {
+    if (!currentPortfolio?.slug) return;
+    const directUrl = `${window.location.origin}/portfolio/${currentPortfolio.slug}`;
+    try {
+      await navigator.clipboard.writeText(directUrl);
+      setLinkCopied(true);
+      setMessage(isArabic ? "تم نسخ الرابط المباشر للمحفظة" : "Direct portfolio link copied.");
+      window.dispatchEvent(new CustomEvent("alpha:meaningful-action", { detail: { action: "copy_portfolio_link" } }));
+      window.setTimeout(() => setLinkCopied(false), 2500);
+    } catch {
+      window.prompt(isArabic ? "انسخ رابط المحفظة" : "Copy portfolio link", directUrl);
+    }
+  };
+
   const exportPdf = async () => {
     if (!reportRef.current || exporting) return;
     setExporting(true);
@@ -149,7 +168,8 @@ export default function MemberDashboard() {
         pdf.addImage(imgData, "JPEG", 0, position, pageWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-      pdf.save(`ALPHA-PLATFORM-${currentPortfolio?.slug || "PORTFOLIO"}-${selected?.month_key || "REPORT"}-V3.0.pdf`);
+      pdf.save(`ALPHA-PLATFORM-${currentPortfolio?.slug || "PORTFOLIO"}-${selected?.month_key || "REPORT"}-V3.1.pdf`);
+      window.dispatchEvent(new CustomEvent("alpha:meaningful-action", { detail: { action: "export_portfolio_pdf" } }));
       setMessage("");
     } catch (error) {
       setMessage(error.message);
@@ -182,6 +202,8 @@ export default function MemberDashboard() {
             </div>
           </section>
 
+          <div className="pdf-brand-strip-v31"><Brand staticMode/><span><small>{isArabic ? "تقرير محفظة منشور" : "PUBLISHED PORTFOLIO REPORT"}</small><b>{dateTimeLabel(selected.updated_at, locale)}</b></span></div>
+
           <section className="dashboard-overview-v3">
             <div className="overview-copy-v3">
               <span className="eyebrow">INSTITUTIONAL PORTFOLIO DASHBOARD</span>
@@ -190,6 +212,7 @@ export default function MemberDashboard() {
             </div>
             <div className="overview-actions-v3" data-html2canvas-ignore="true">
               <InsightDrawer label={isArabic ? "اشرح الأداء" : "Explain performance"} title={isArabic ? "ملخص أداء المحفظة" : "Portfolio performance brief"} summary={aiSummary}/>
+              <button className="button subtle" onClick={copyDirectLink}><span className="copy-link-icon-v31">{linkCopied ? <Check size={15}/> : <Link2 size={15}/>}</span>{linkCopied ? (isArabic ? "تم النسخ" : "Copied") : (isArabic ? "نسخ الرابط المباشر" : "Copy direct link")}</button>
               <button className="button gold" onClick={exportPdf} disabled={exporting}><Download size={15}/>{exporting ? t("loading") : t("exportPdf")}</button>
             </div>
           </section>
@@ -242,13 +265,14 @@ export default function MemberDashboard() {
               const research = recommendationByTicker[String(row.ticker).toUpperCase()];
               const company = prices[String(row.ticker).toUpperCase()]?.company_name || research?.company_name || row.company_name || row.ticker;
               const potential = research ? recommendationMetrics(research, prices).upsideToTarget : null;
-              return <article className="holding-card-v3" key={row.id || row.ticker}><header><CompanyMark ticker={row.ticker} name={company}/><div><h3>{row.ticker}</h3><p>{company}</p></div><span style={{ borderColor: allocationColours[index % allocationColours.length] }}>{formatNumber(row.weight, 1, locale)}%</span></header><div className="holding-price-grid-v3"><span><small>{isArabic ? "السعر الحالي" : "Current price"}</small><b>{formatNumber(row.close_price, 2, locale)}</b></span><span><small>{isArabic ? "المستهدف" : "Target"}</small><b>{research ? formatNumber(research.target_price, 2, locale) : "—"}</b></span><span><small>{isArabic ? "العائد" : "Return"}</small><b className={row.mtd >= 0 ? "positive" : "negative"}>{formatPercent(row.mtd)}</b></span><span><small>{isArabic ? "المساهمة" : "Contribution"}</small><b className={row.contribution >= 0 ? "positive" : "negative"}>{formatPercent(row.contribution)}</b></span></div><div className="potential-progress-v3"><span><small>{isArabic ? "المتبقي للمستهدف" : "Potential"}</small><b className={Number(potential || 0) >= 0 ? "positive" : "negative"}>{potential === null ? "—" : formatPercent(potential)}</b></span><i><em style={{ width: `${Math.min(100, Math.max(4, 50 + Number(row.mtd || 0)))}%` }}/></i></div>{research ? <Link to={`/recommendations/${research.id}`}>{isArabic ? "بحث سريع" : "Quick research"}<ArrowUpRight size={14}/></Link> : <span className="holding-no-research-v3">{isArabic ? "لا يوجد بحث مرتبط" : "No linked research"}</span>}</article>;
+              const thesis = row.investment_thesis || research?.thesis || "";
+              return <article className="holding-card-v3" key={row.id || row.ticker}><header><CompanyMark ticker={row.ticker} name={company}/><div><h3>{row.ticker}</h3><p>{company}</p></div><span style={{ borderColor: allocationColours[index % allocationColours.length] }}>{formatNumber(row.weight, 1, locale)}%</span></header><div className="holding-price-grid-v3"><span><small>{isArabic ? "السعر الحالي" : "Current price"}</small><b>{formatNumber(row.close_price, 2, locale)}</b></span><span><small>{isArabic ? "المستهدف" : "Target"}</small><b>{research ? formatNumber(research.target_price, 2, locale) : "—"}</b></span><span><small>{isArabic ? "العائد" : "Return"}</small><b className={row.mtd >= 0 ? "positive" : "negative"}>{formatPercent(row.mtd)}</b></span><span><small>{isArabic ? "المساهمة" : "Contribution"}</small><b className={row.contribution >= 0 ? "positive" : "negative"}>{formatPercent(row.contribution)}</b></span></div><div className="potential-progress-v3"><span><small>{isArabic ? "المتبقي للمستهدف" : "Potential"}</small><b className={Number(potential || 0) >= 0 ? "positive" : "negative"}>{potential === null ? "—" : formatPercent(potential)}</b></span><i><em style={{ width: `${Math.min(100, Math.max(4, 50 + Number(row.mtd || 0)))}%` }}/></i></div><div className="holding-thesis-v31"><small>{isArabic ? "الفكرة الاستثمارية" : "Investment thesis"}</small><p>{thesis || (isArabic ? "لم تتم إضافة الفكرة الاستثمارية لهذا السهم بعد." : "No investment thesis has been added for this holding yet.")}</p></div>{research ? <Link to={`/recommendations/${research.id}`}>{isArabic ? "بحث سريع" : "Quick research"}<ArrowUpRight size={14}/></Link> : <span className="holding-no-research-v3">{isArabic ? "لا يوجد بحث مرتبط" : "No linked research"}</span>}</article>;
             })}</div>
           </section>
 
           <section className="portfolio-section-v21 panel-v21 institutional-table-panel-v3">
             <div className="panel-heading-v21"><div><span className="eyebrow">DETAILED HOLDINGS</span><h2>{t("officialPortfolio")}</h2><p>{t("officialPortfolioText")}</p></div></div>
-            <div className="table-scroll"><table className="data-table-v21"><thead><tr><th>{t("ticker")}</th><th>{t("weight")}</th><th>{t("open")}</th><th>{t("latest")}</th><th>{t("return")}</th><th>{t("contribution")}</th></tr></thead><tbody>{metrics.rows.map((row) => <tr key={row.id || row.ticker}><td><b className="ticker-chip">{row.ticker}</b></td><td>{formatNumber(row.weight, 2, locale)}%</td><td>{formatNumber(row.open_price, 2, locale)}</td><td>{formatNumber(row.close_price, 2, locale)}</td><td className={row.mtd >= 0 ? "positive" : "negative"}><b>{formatPercent(row.mtd)}</b></td><td className={row.contribution >= 0 ? "positive" : "negative"}><b>{formatPercent(row.contribution)}</b></td></tr>)}</tbody></table></div>
+            <div className="table-scroll"><table className="data-table-v21 holdings-detail-table-v31"><thead><tr><th>{t("ticker")}</th><th>{t("weight")}</th><th>{t("open")}</th><th>{t("latest")}</th><th>{t("return")}</th><th>{t("contribution")}</th><th>{isArabic ? "الفكرة الاستثمارية" : "Investment thesis"}</th></tr></thead><tbody>{metrics.rows.map((row) => { const linkedResearch = recommendationByTicker[String(row.ticker).toUpperCase()]; const thesis = row.investment_thesis || linkedResearch?.thesis || "—"; return <tr key={row.id || row.ticker}><td><b className="ticker-chip">{row.ticker}</b></td><td>{formatNumber(row.weight, 2, locale)}%</td><td>{formatNumber(row.open_price, 2, locale)}</td><td>{formatNumber(row.close_price, 2, locale)}</td><td className={row.mtd >= 0 ? "positive" : "negative"}><b>{formatPercent(row.mtd)}</b></td><td className={row.contribution >= 0 ? "positive" : "negative"}><b>{formatPercent(row.contribution)}</b></td><td className="table-thesis-v31">{thesis}</td></tr>; })}</tbody></table></div>
           </section>
 
           <section className="track-record-v21 panel-v21 institutional-table-panel-v3">

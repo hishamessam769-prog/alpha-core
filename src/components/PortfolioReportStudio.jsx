@@ -5,8 +5,10 @@ import jsPDF from "jspdf";
 import { buildAiSummary, buildPortfolioReport, buildSocialCopy, safeFilePart } from "../lib/reporting";
 import { dateTimeLabel, formatNumber, formatPercent } from "../lib/calculations";
 import { createZipBlob, downloadBlob } from "../lib/zip";
+import { usePlatformSettings } from "../context/SettingsContext";
 
 export default function PortfolioReportStudio({ open, onClose, portfolio, month, months, isArabic, locale, onMessage }) {
+  const { settings } = usePlatformSettings();
   const [reportType, setReportType] = useState("monthly");
   const [activeText, setActiveText] = useState("ai");
   const [working, setWorking] = useState(false);
@@ -72,7 +74,7 @@ export default function PortfolioReportStudio({ open, onClose, portfolio, month,
       "Holdings:",
       ...report.rows.map((row) => `${row.ticker} | Weight ${formatNumber(row.weight, 2, locale)}% | Open ${formatNumber(row.open_price, 2, locale)} | Latest ${formatNumber(row.close_price, 2, locale)} | Return ${formatPercent(row.mtd)} | Contribution ${formatPercent(row.contribution)}`),
       "",
-      `Disclaimer: ${ascii(report.disclaimer) || "Educational information only. Not personalised investment advice."}`,
+      `Disclaimer: ${ascii((isArabic ? settings.disclaimer_ar : settings.disclaimer_en) || report.disclaimer) || "Educational information only. Not personalised investment advice."}`,
     ];
     let textY = 30;
     for (const line of appendix) {
@@ -153,7 +155,7 @@ export default function PortfolioReportStudio({ open, onClose, portfolio, month,
 
         <div className="report-studio-layout-v231">
           <div className="report-preview-shell-v231">
-            <PortfolioReportDocument report={report} locale={locale} isArabic={isArabic} reportRef={reportRef}/>
+            <PortfolioReportDocument report={report} locale={locale} isArabic={isArabic} reportRef={reportRef} settings={settings}/>
           </div>
 
           <aside className="report-copy-panel-v231" data-html2canvas-ignore="true">
@@ -170,11 +172,11 @@ export default function PortfolioReportStudio({ open, onClose, portfolio, month,
   );
 }
 
-function PortfolioReportDocument({ report, locale, isArabic, reportRef }) {
+function PortfolioReportDocument({ report, locale, isArabic, reportRef, settings }) {
   return (
     <article className="portfolio-report-document-v231" ref={reportRef} dir={isArabic ? "rtl" : "ltr"}>
       <header className="portfolio-report-brand-v231">
-        <div className="report-logo-v231"><b>AC</b><span><strong>ALPHA CORE</strong><small>INDEPENDENT PERFORMANCE INTELLIGENCE</small></span></div>
+        <div className="report-logo-v231">{settings.logo_url ? <img src={settings.logo_url} alt="ALPHA PLATFORM" crossOrigin="anonymous"/> : <b>AC</b>}<span><strong>ALPHA CORE</strong><small>INDEPENDENT PERFORMANCE INTELLIGENCE</small></span></div>
         <div><small>{report.frequency}</small><b>{report.monthLabel}</b></div>
       </header>
 
@@ -198,7 +200,7 @@ function PortfolioReportDocument({ report, locale, isArabic, reportRef }) {
         <h2>{isArabic ? "الأسهم والأوزان والأداء" : "Holdings, weights and performance"}</h2>
         <table>
           <thead><tr><th>{isArabic ? "السهم" : "Ticker"}</th><th>{isArabic ? "الوزن" : "Weight"}</th><th>{isArabic ? "سعر البداية" : "Open"}</th><th>{isArabic ? "السعر الحالي" : "Latest"}</th><th>{isArabic ? "العائد" : "Return"}</th><th>{isArabic ? "المساهمة" : "Contribution"}</th></tr></thead>
-          <tbody>{report.rows.map((row) => <tr key={row.id || row.ticker}><td><b>{row.ticker}</b></td><td>{formatNumber(row.weight, 2, locale)}%</td><td>{formatNumber(row.open_price, 2, locale)}</td><td>{formatNumber(row.close_price, 2, locale)}</td><td>{formatPercent(row.mtd)}</td><td>{formatPercent(row.contribution)}</td></tr>)}</tbody>
+          <tbody>{report.rows.map((row) => <tr key={row.id || row.ticker}><td><b>{row.ticker}</b>{row.investment_thesis && <small className="report-thesis-v31">{row.investment_thesis}</small>}</td><td>{formatNumber(row.weight, 2, locale)}%</td><td>{formatNumber(row.open_price, 2, locale)}</td><td>{formatNumber(row.close_price, 2, locale)}</td><td>{formatPercent(row.mtd)}</td><td>{formatPercent(row.contribution)}</td></tr>)}</tbody>
         </table>
       </section>
 
@@ -210,7 +212,7 @@ function PortfolioReportDocument({ report, locale, isArabic, reportRef }) {
       <section className="portfolio-report-section-v231"><h2>{isArabic ? "ملاحظات الاستراتيجية" : "Strategy notes"}</h2><p>{report.strategyNotes}</p></section>
       {report.changes.length > 0 && <section className="portfolio-report-section-v231"><h2>{isArabic ? "أهم التغييرات" : "Key changes"}</h2><ul>{report.changes.map((change) => <li key={change}>{change}</li>)}</ul></section>}
       <section className="portfolio-report-guidance-v231"><div><h2>{isArabic ? "تعليمات المستثمر الحالي" : "Existing investor guidance"}</h2><p>{report.currentGuidance}</p></div><div><h2>{isArabic ? "تعليمات المستثمر الجديد" : "New investor guidance"}</h2><p>{report.newGuidance}</p></div></section>
-      <footer><b>ALPHA CORE</b><span>{report.disclaimer}</span><small>{dateTimeLabel(report.updatedAt, locale)}</small></footer>
+      <footer><b>ALPHA CORE</b><span>{(isArabic ? settings.disclaimer_ar : settings.disclaimer_en) || report.disclaimer}</span><small>{dateTimeLabel(report.updatedAt, locale)}</small></footer>
     </article>
   );
 }

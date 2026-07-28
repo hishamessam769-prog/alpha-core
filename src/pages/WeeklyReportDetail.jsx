@@ -3,15 +3,18 @@ import { ArrowLeft, ArrowRight, BarChart3, CalendarRange, Coins, Download, Eye, 
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { Link, useParams } from "react-router-dom";
+import Brand from "../components/Brand";
 import DashboardHeader from "../components/DashboardHeader";
 import InsightDrawer from "../components/InsightDrawer";
 import { useLanguage } from "../context/LanguageContext";
+import { usePlatformSettings } from "../context/SettingsContext";
 import { supabase } from "../lib/supabase";
 import { dateTimeLabel } from "../lib/calculations";
 
 export default function WeeklyReportDetail() {
   const { slug } = useParams();
   const { isArabic } = useLanguage();
+  const { settings } = usePlatformSettings();
   const locale = isArabic ? "ar-EG" : "en-GB";
   const BackIcon = isArabic ? ArrowRight : ArrowLeft;
   const reportRef = useRef(null);
@@ -44,7 +47,8 @@ export default function WeeklyReportDetail() {
       const image = canvas.toDataURL("image/jpeg", 0.94);
       pdf.setFillColor(11, 15, 20); pdf.rect(0, 0, width, pageHeight, "F"); pdf.addImage(image, "JPEG", 0, position, width, height); left -= pageHeight;
       while (left > 2) { position -= pageHeight; pdf.addPage(); pdf.setFillColor(11, 15, 20); pdf.rect(0, 0, width, pageHeight, "F"); pdf.addImage(image, "JPEG", 0, position, width, height); left -= pageHeight; }
-      pdf.save(`ALPHA-WEEKLY-${report.slug}-V3.0.pdf`);
+      pdf.save(`ALPHA-WEEKLY-${report.slug}-V3.1.pdf`);
+      window.dispatchEvent(new CustomEvent("alpha:meaningful-action", { detail: { action: "export_weekly_pdf" } }));
     } catch (error) { setMessage(error.message); } finally { setExporting(false); }
   };
 
@@ -62,6 +66,8 @@ export default function WeeklyReportDetail() {
       <main ref={reportRef} className="weekly-detail-v23 weekly-detail-v3">
         <div className="weekly-detail-toolbar-v3" data-html2canvas-ignore="true"><Link className="back-link" to="/weekly-reports"><BackIcon size={15}/>{isArabic ? "كل التقارير" : "All reports"}</Link><div><InsightDrawer label={isArabic ? "اشرح التقرير" : "Explain this report"} title={isArabic ? "ملخص التقرير الأسبوعي" : "Weekly report brief"} summary={aiSummary}/><button className="button gold" type="button" onClick={exportPdf} disabled={exporting}><Download size={15}/>{exporting ? (isArabic ? "جاري التجهيز" : "Preparing") : "PDF"}</button></div></div>
 
+        <div className="pdf-brand-strip-v31"><Brand staticMode/><span><small>{isArabic ? "تقرير أسبوعي منشور" : "PUBLISHED WEEKLY REPORT"}</small><b>{dateTimeLabel(report.updated_at || report.published_at, locale)}</b></span></div>
+
         <header className="weekly-detail-header-v3"><div className="weekly-report-label-v3"><span>ALPHA WEEKLY</span><b>W{getWeekNumber(report.week_end)}</b></div><span className="eyebrow">INSTITUTIONAL MARKET REPORT</span><h1>{report.title}</h1><p>{report.summary}</p><div className="weekly-report-meta-v3"><span><CalendarRange size={16}/><small>{isArabic ? "الفترة" : "REPORTING PERIOD"}</small><b>{new Date(`${report.week_start}T12:00:00`).toLocaleDateString(locale)} — {new Date(`${report.week_end}T12:00:00`).toLocaleDateString(locale)}</b></span><span><ShieldCheck size={16}/><small>{isArabic ? "آخر تحديث" : "LAST UPDATED"}</small><b>{dateTimeLabel(report.updated_at || report.published_at, locale)}</b></span></div></header>
 
         <section className="weekly-executive-summary-v3"><div><Sparkles/><span><small>EXECUTIVE SUMMARY</small><p>{report.summary}</p></span></div></section>
@@ -73,7 +79,7 @@ export default function WeeklyReportDetail() {
           <ReportSection number="04" icon={<Eye/>} eyebrow="NEXT WEEK" title={isArabic ? "ما نراقبه الأسبوع القادم" : "What we are watching next"} body={report.watch_next}/>
         </section>
 
-        <footer className="report-disclaimer-v21"><ShieldCheck size={14}/>{isArabic ? "هذا التقرير لأغراض تعليمية ومعلوماتية عامة ولا يمثل نصيحة استثمارية شخصية." : "This report is for general educational and informational purposes and is not personalised investment advice."}</footer>
+        <footer className="report-disclaimer-v21"><ShieldCheck size={14}/>{isArabic ? settings.disclaimer_ar : settings.disclaimer_en}</footer>
       </main>
     </div>
   );
