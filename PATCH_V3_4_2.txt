@@ -1,0 +1,29 @@
+ALPHA PLATFORM V3.4.2 — PORTFOLIO CHART HOTFIX
+
+Scope
+-----
+This patch changes only the drawing layer of the Portfolio page charts.
+No database schema, Supabase query, route, authentication flow, permission,
+portfolio calculation, recommendation logic, report or export workflow was changed.
+
+Fixed
+-----
+1. Cumulative Performance chart
+   - Replaced the non-rendering Recharts drawing layer with responsive native SVG.
+   - Uses the same stored monthly performance series.
+   - Preserves 3M, 6M, 1Y and ALL filters.
+   - Restores Portfolio, Benchmark and Alpha lines and the Portfolio area fill.
+   - Adds responsive axes, hover/touch data inspection and a non-overlapping legend.
+
+2. Portfolio Allocation chart
+   - Replaced the invisible donut drawing layer with responsive native SVG segments.
+   - Uses the same live holding weights and colour mapping.
+   - Preserves the holding count and existing allocation legend.
+
+3. Existing Portfolio Visual Intelligence charts
+   - Replaced only their non-rendering rings with native SVG circles.
+   - Existing layout, values, cards and data feeds are unchanged.
+
+Deployment
+----------
+No SQL is required. Upload the repository contents and redeploy the existing Vercel project.

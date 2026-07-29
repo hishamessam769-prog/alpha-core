@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Activity, ArrowUpRight, BriefcaseBusiness, CalendarClock, Check, CheckCircle2, Clock3, Download, FileText, Layers3, Link2, RefreshCw, ShieldCheck, Sparkles, Target, TrendingDown, TrendingUp, UsersRound } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Link, useParams } from "react-router-dom";
 import Brand from "../components/Brand";
 import AuthorAttribution from "../components/AuthorAttribution";
@@ -12,6 +11,7 @@ import InsightDrawer from "../components/InsightDrawer";
 import KpiCard from "../components/KpiCard";
 import MarketNewsWidget from "../components/MarketNewsWidget";
 import PerformanceChart from "../components/PerformanceChart";
+import AllocationDonutChart from "../components/AllocationDonutChart";
 import PortfolioVisualSuite from "../components/PortfolioVisualSuite";
 import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
@@ -261,7 +261,13 @@ export default function MemberDashboard() {
 
             <article className="panel-v21 allocation-panel-v3">
               <div className="panel-heading-v21"><div><span className="eyebrow">CURRENT ALLOCATION</span><h2>{isArabic ? "توزيع المحفظة" : "Portfolio allocation"}</h2><p>{isArabic ? "الأوزان الرسمية للشهر المحدد." : "Official weights for the selected month."}</p></div></div>
-              <div className="allocation-chart-v3"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={allocationData} dataKey="value" nameKey="name" innerRadius="61%" outerRadius="88%" paddingAngle={2} stroke="none" animationDuration={900}>{allocationData.map((entry, index) => <Cell key={entry.name} fill={allocationColours[index % allocationColours.length]}/>)}</Pie><Tooltip contentStyle={{ background: "#111821", border: "1px solid #2a3544", borderRadius: 12 }} formatter={(value) => [`${formatNumber(value, 2, locale)}%`, isArabic ? "الوزن" : "Weight"]}/></PieChart></ResponsiveContainer><div><b>{metrics.rows.length}</b><span>{isArabic ? "أسهم" : "holdings"}</span></div></div>
+              <AllocationDonutChart
+                data={allocationData}
+                colours={allocationColours}
+                holdingsCount={metrics.rows.length}
+                locale={locale}
+                isArabic={isArabic}
+              />
               <div className="allocation-legend-v3">{allocationData.map((entry, index) => <span key={entry.name}><i style={{ backgroundColor: allocationColours[index % allocationColours.length] }}/><b>{entry.name}</b><em>{formatNumber(entry.value, 1, locale)}%</em></span>)}</div>
             </article>
           </section>

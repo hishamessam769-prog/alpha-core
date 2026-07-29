@@ -1,4 +1,3 @@
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { formatNumber, formatPercent } from "../lib/calculations";
 
 const visualColours = ["#20d3ff", "#8b5cf6", "#2dd4bf", "#60a5fa", "#f97316", "#ec4899"];
@@ -14,36 +13,25 @@ function clampWeight(value) {
 
 function AssetWeightDonut({ row, index, locale, isArabic }) {
   const weight = clampWeight(row?.weight);
-  const chartData = [
-    { name: row?.ticker || "—", value: weight },
-    { name: isArabic ? "المتبقي" : "Remaining", value: Math.max(0, 100 - weight) },
-  ];
   const colour = visualColours[index % visualColours.length];
   const monthlyReturn = safeNumber(row?.mtd);
 
   return (
     <article className="asset-weight-card-v341">
       <div className="asset-weight-chart-v341" aria-label={`${row?.ticker || "Asset"} ${formatNumber(weight, 1, locale)}%`}>
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={chartData}
-              dataKey="value"
-              startAngle={90}
-              endAngle={-270}
-              innerRadius="69%"
-              outerRadius="94%"
-              cornerRadius={8}
-              stroke="none"
-              isAnimationActive
-              animationBegin={100 + index * 90}
-              animationDuration={900}
-            >
-              <Cell fill={colour}/>
-              <Cell fill="rgba(148, 163, 184, 0.12)"/>
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
+        <svg className="asset-weight-svg-v342" viewBox="0 0 100 100" aria-hidden="true">
+          <circle className="asset-weight-track-v342" cx="50" cy="50" r="42" pathLength="100"/>
+          <circle
+            className="asset-weight-segment-v342"
+            cx="50"
+            cy="50"
+            r="42"
+            pathLength="100"
+            stroke={colour}
+            strokeDasharray={`${weight} ${100 - weight}`}
+            style={{ "--segment-delay": `${100 + index * 90}ms` }}
+          />
+        </svg>
         <div className="asset-weight-centre-v341">
           <strong>{formatNumber(weight, 1, locale)}%</strong>
           <small>{row?.ticker || "—"}</small>
@@ -54,6 +42,40 @@ function AssetWeightDonut({ row, index, locale, isArabic }) {
         <em className={monthlyReturn >= 0 ? "positive" : "negative"}>{formatPercent(monthlyReturn)}</em>
       </div>
     </article>
+  );
+}
+
+function ComparisonRing({ data }) {
+  const total = data.reduce((sum, entry) => sum + Math.max(0, safeNumber(entry.value)), 0) || 1;
+  let offset = 0;
+
+  return (
+    <svg className="alpha-comparison-svg-v342" viewBox="0 0 100 100" aria-hidden="true">
+      <circle className="alpha-comparison-track-v342" cx="50" cy="50" r="41" pathLength="100"/>
+      {data.map((entry, index) => {
+        const percentage = (Math.max(0, safeNumber(entry.value)) / total) * 100;
+        const gap = Math.min(1.4, percentage * 0.15);
+        const visiblePercentage = Math.max(0, percentage - gap);
+        const dashOffset = -offset - gap / 2;
+        offset += percentage;
+        return (
+          <circle
+            className="alpha-comparison-segment-v342"
+            key={entry.name}
+            cx="50"
+            cy="50"
+            r="41"
+            pathLength="100"
+            stroke={entry.colour}
+            strokeDasharray={`${visiblePercentage} ${100 - visiblePercentage}`}
+            strokeDashoffset={dashOffset}
+            style={{ "--segment-delay": `${index * 140}ms` }}
+          >
+            <title>{`${entry.name}: ${formatPercent(entry.actual)}`}</title>
+          </circle>
+        );
+      })}
+    </svg>
   );
 }
 
@@ -111,29 +133,7 @@ export default function PortfolioVisualSuite({
 
         <article className="alpha-comparison-card-v341">
           <div className="alpha-comparison-orbit-v341">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={comparisonData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius="63%"
-                  outerRadius="91%"
-                  paddingAngle={4}
-                  cornerRadius={10}
-                  stroke="none"
-                  isAnimationActive
-                  animationDuration={1200}
-                >
-                  {comparisonData.map((entry) => <Cell key={entry.name} fill={entry.colour}/>) }
-                </Pie>
-                <Tooltip
-                  contentStyle={{ background: "var(--panel)", border: "1px solid var(--border)", borderRadius: 14, color: "var(--text)" }}
-                  itemStyle={{ color: "var(--text)" }}
-                  formatter={(_, __, payload) => [formatPercent(payload?.payload?.actual || 0), payload?.payload?.name]}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <ComparisonRing data={comparisonData}/>
             <div className="alpha-comparison-centre-v341">
               <small>{isArabic ? "الألفا الشهرية" : "Monthly Alpha"}</small>
               <strong className={alpha >= 0 ? "positive" : "negative"}>{formatPercent(alpha)}</strong>
