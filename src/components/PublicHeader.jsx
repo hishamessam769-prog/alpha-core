@@ -20,9 +20,10 @@ export default function PublicHeader() {
       <Brand />
       <nav className={`public-nav platform-nav ${menuOpen ? "open" : ""}`}>
         <NavLink to="/" end onClick={close}>{t("navHome")}</NavLink>
-        <NavLink to="/dashboard" onClick={close}>{isArabic ? "المحافظ" : "Portfolio"}</NavLink>
+        <NavLink to="/portfolios" onClick={close}>{isArabic ? "المحافظ" : "Portfolios"}</NavLink>
         <NavLink to="/recommendations" onClick={close}>{isArabic ? "التوصيات" : "Recommendations"}</NavLink>
         <Link to="/recommendations#research-library" onClick={close}>{isArabic ? "الأبحاث" : "Research"}</Link>
+        <NavLink to="/news" onClick={close}>{isArabic ? "الأخبار" : "News & Analysis"}</NavLink>
         <NavLink to="/weekly-reports" onClick={close}>{isArabic ? "التقارير" : "Weekly Reports"}</NavLink>
         <NavLink to="/methodology" onClick={close}>{isArabic ? "الرؤى" : "Insights"}</NavLink>
         <a href="/#pricing" onClick={close}>{isArabic ? "الأسعار" : "Pricing"}</a>

@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BriefcaseBusiness, FileText, Search, Sparkles, TrendingUp, UserRound, X } from "lucide-react";
+import { BriefcaseBusiness, FileText, Newspaper, Search, Sparkles, TrendingUp, UserRound, UsersRound, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
 
 const baseItems = [
   { type: "page", title: "Portfolio Terminal", subtitle: "Live performance, holdings and Alpha", path: "/dashboard", icon: BriefcaseBusiness },
+  { type: "page", title: "Portfolio Library", subtitle: "All published portfolio strategies", path: "/portfolios", icon: BriefcaseBusiness },
   { type: "page", title: "Recommendations", subtitle: "Independent investment recommendations", path: "/recommendations", icon: TrendingUp },
   { type: "page", title: "Research & Insights", subtitle: "Research library and methodology", path: "/methodology", icon: Sparkles },
+  { type: "page", title: "News & Analysis", subtitle: "Market news, company updates and events", path: "/news", icon: Newspaper },
   { type: "page", title: "Weekly Reports", subtitle: "Market recap and portfolio updates", path: "/weekly-reports", icon: FileText },
   { type: "page", title: "Profile", subtitle: "Account and preferences", path: "/profile", icon: UserRound },
 ];
@@ -48,18 +50,20 @@ export default function GlobalSearch({ compact = false }) {
       const results = await Promise.allSettled([
         supabase.from("portfolios").select("id, name, name_ar, slug, description").eq("is_published", true),
         supabase.from("recommendations").select("id, ticker, company_name, title").eq("is_published", true),
-        supabase.from("weekly_reports").select("id, slug, title, summary, week_end").eq("is_published", true),
+        supabase.from("weekly_reports").select("id, slug, title, summary, week_end, created_by").eq("is_published", true),
+        supabase.from("profiles").select("id, full_name, email, is_admin, is_super_admin"),
       ]);
       if (!active) return;
       const portfolios = results[0].status === "fulfilled" ? results[0].value.data || [] : [];
       const recommendations = results[1].status === "fulfilled" ? results[1].value.data || [] : [];
       const reports = results[2].status === "fulfilled" ? results[2].value.data || [] : [];
+      const profiles = results[3].status === "fulfilled" ? results[3].value.data || [] : [];
       setRemoteItems([
         ...portfolios.map((item) => ({
           type: "portfolio",
           title: isArabic && item.name_ar ? item.name_ar : item.name,
           subtitle: item.description || (isArabic ? "محفظة استثمارية منشورة" : "Published investment portfolio"),
-          path: "/dashboard",
+          path: `/portfolio/${item.slug}`,
           icon: BriefcaseBusiness,
         })),
         ...recommendations.map((item) => ({
@@ -73,8 +77,15 @@ export default function GlobalSearch({ compact = false }) {
           type: "report",
           title: item.title,
           subtitle: item.summary || (isArabic ? "تقرير أسبوعي" : "Weekly market report"),
-          path: `/weekly-reports/${item.slug}`,
+          path: `/news/report/${item.id}`,
           icon: FileText,
+        })),
+        ...profiles.filter((item) => item.full_name).map((item) => ({
+          type: "analyst",
+          title: item.full_name,
+          subtitle: item.is_super_admin ? "Founder & Super Admin" : item.is_admin ? "Platform Administrator" : "Platform author",
+          path: `/analysts/${item.id}`,
+          icon: UsersRound,
         })),
       ]);
       setLoading(false);
@@ -106,7 +117,7 @@ export default function GlobalSearch({ compact = false }) {
           <section className="command-palette">
             <header>
               <Search size={19}/>
-              <input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isArabic ? "ابحث عن شركة أو توصية أو محفظة أو تقرير" : "Search companies, recommendations, portfolios or reports"}/>
+              <input ref={inputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isArabic ? "ابحث عن شركة أو توصية أو محفظة أو تقرير" : "Search companies, news, analysts, portfolios or reports"}/>
               <button type="button" onClick={() => setOpen(false)}><X size={17}/></button>
             </header>
             <div className="command-meta"><span>{isArabic ? "بحث شامل داخل ALPHA PLATFORM" : "Search across ALPHA PLATFORM"}</span><small>{loading ? (isArabic ? "جاري تحديث النتائج…" : "Updating results…") : `${items.length} ${isArabic ? "نتيجة" : "results"}`}</small></div>

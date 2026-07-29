@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, BarChart3, CalendarRange, Coins, Download, Eye, 
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { Link, useParams } from "react-router-dom";
+import AuthorAttribution from "../components/AuthorAttribution";
 import Brand from "../components/Brand";
 import DashboardHeader from "../components/DashboardHeader";
 import InsightDrawer from "../components/InsightDrawer";
@@ -19,6 +20,7 @@ export default function WeeklyReportDetail() {
   const BackIcon = isArabic ? ArrowRight : ArrowLeft;
   const reportRef = useRef(null);
   const [report, setReport] = useState(null);
+  const [author, setAuthor] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
@@ -28,6 +30,10 @@ export default function WeeklyReportDetail() {
       const { data, error } = await supabase.from("weekly_reports").select("*").eq("slug", slug).single();
       if (error) setMessage(error.message);
       setReport(data || null);
+      if (data?.created_by) {
+        const profileResult = await supabase.from("profiles").select("*").eq("id", data.created_by).maybeSingle();
+        if (!profileResult.error) setAuthor(profileResult.data);
+      }
       setLoading(false);
     };
     load();
@@ -47,7 +53,7 @@ export default function WeeklyReportDetail() {
       const image = canvas.toDataURL("image/jpeg", 0.94);
       pdf.setFillColor(11, 15, 20); pdf.rect(0, 0, width, pageHeight, "F"); pdf.addImage(image, "JPEG", 0, position, width, height); left -= pageHeight;
       while (left > 2) { position -= pageHeight; pdf.addPage(); pdf.setFillColor(11, 15, 20); pdf.rect(0, 0, width, pageHeight, "F"); pdf.addImage(image, "JPEG", 0, position, width, height); left -= pageHeight; }
-      pdf.save(`ALPHA-WEEKLY-${report.slug}-V3.1.pdf`);
+      pdf.save(`ALPHA-WEEKLY-${report.slug}-V3.2.pdf`);
       window.dispatchEvent(new CustomEvent("alpha:meaningful-action", { detail: { action: "export_weekly_pdf" } }));
     } catch (error) { setMessage(error.message); } finally { setExporting(false); }
   };
@@ -79,6 +85,7 @@ export default function WeeklyReportDetail() {
           <ReportSection number="04" icon={<Eye/>} eyebrow="NEXT WEEK" title={isArabic ? "ما نراقبه الأسبوع القادم" : "What we are watching next"} body={report.watch_next}/>
         </section>
 
+        <AuthorAttribution profile={author} authorId={report.created_by} label={isArabic ? "أعده ونشره" : "RESEARCHED & PUBLISHED BY"}/>
         <footer className="report-disclaimer-v21"><ShieldCheck size={14}/>{isArabic ? settings.disclaimer_ar : settings.disclaimer_en}</footer>
       </main>
     </div>

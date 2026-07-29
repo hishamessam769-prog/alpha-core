@@ -15,6 +15,11 @@ import WeeklyReportsAdmin from "./pages/WeeklyReportsAdmin";
 import AdminSettings from "./pages/AdminSettings";
 import AdminSupport from "./pages/AdminSupport";
 import Profile from "./pages/Profile";
+import PortfoliosIndex from "./pages/PortfoliosIndex";
+import NewsAnalysis from "./pages/NewsAnalysis";
+import NewsArticle from "./pages/NewsArticle";
+import AnalystProfile from "./pages/AnalystProfile";
+import AdminTeam from "./pages/AdminTeam";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SupportWidget from "./components/SupportWidget";
 import SmartSurvey from "./components/SmartSurvey";
@@ -32,6 +37,7 @@ export default function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<ProtectedRoute><MemberDashboard /></ProtectedRoute>} />
+        <Route path="/portfolios" element={<ProtectedRoute><PortfoliosIndex /></ProtectedRoute>} />
         <Route path="/portfolio/:slug" element={<ProtectedRoute><MemberDashboard /></ProtectedRoute>} />
         <Route path="/recommendations" element={<ProtectedRoute><IdeasHub /></ProtectedRoute>} />
         <Route path="/recommendations/:id" element={<ProtectedRoute><IdeaDetail /></ProtectedRoute>} />
@@ -41,6 +47,9 @@ export default function App() {
         <Route path="/research/:id" element={<RecommendationRedirect />} />
         <Route path="/weekly-reports" element={<ProtectedRoute><WeeklyReports /></ProtectedRoute>} />
         <Route path="/weekly-reports/:slug" element={<ProtectedRoute><WeeklyReportDetail /></ProtectedRoute>} />
+        <Route path="/news" element={<ProtectedRoute><NewsAnalysis /></ProtectedRoute>} />
+        <Route path="/news/:kind/:id" element={<ProtectedRoute><NewsArticle /></ProtectedRoute>} />
+        <Route path="/analysts/:id" element={<ProtectedRoute><AnalystProfile /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/recommendations" element={<ProtectedRoute adminOnly><RecommendationAdmin /></ProtectedRoute>} />
@@ -48,6 +57,7 @@ export default function App() {
         <Route path="/admin/prices" element={<ProtectedRoute adminOnly><PriceImportAdmin /></ProtectedRoute>} />
         <Route path="/admin/support" element={<ProtectedRoute adminOnly><AdminSupport /></ProtectedRoute>} />
         <Route path="/admin/settings" element={<ProtectedRoute adminOnly><AdminSettings /></ProtectedRoute>} />
+        <Route path="/admin/team" element={<ProtectedRoute adminOnly><AdminTeam /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {showMemberExperience && <><SupportWidget/><SmartSurvey/></>}

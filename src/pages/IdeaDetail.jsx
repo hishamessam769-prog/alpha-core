@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Award, BarChart3, BookOpen, Building2, CalendarDays, CheckCircle2, Clock3, Gauge, History, PauseCircle, ShieldAlert, Sparkles, Target, TrendingUp, UserRound } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
+import AuthorAttribution from "../components/AuthorAttribution";
 import CompanyMark from "../components/CompanyMark";
 import DashboardHeader from "../components/DashboardHeader";
 import InsightDrawer from "../components/InsightDrawer";
@@ -19,17 +20,19 @@ export default function IdeaDetail() {
   const [updates, setUpdates] = useState([]);
   const [related, setRelated] = useState([]);
   const [prices, setPrices] = useState({});
+  const [author, setAuthor] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const [recommendationResult, updatesResult, pricesResult, relatedResult] = await Promise.all([
+      const [recommendationResult, updatesResult, pricesResult, relatedResult, profilesResult] = await Promise.all([
         supabase.from("recommendations").select("*").eq("id", id).single(),
         supabase.from("recommendation_updates").select("*").eq("recommendation_id", id).order("update_date", { ascending: false }),
         supabase.from("market_prices").select("ticker, company_name, close_price, price_date"),
         supabase.from("recommendations").select("*").eq("is_published", true).neq("id", id).order("recommendation_date", { ascending: false }).limit(3),
+        supabase.from("profiles").select("*"),
       ]);
       const error = recommendationResult.error || updatesResult.error || pricesResult.error || relatedResult.error;
       if (error) setMessage(error.message || "");
@@ -37,6 +40,7 @@ export default function IdeaDetail() {
       setUpdates(updatesResult.data || []);
       setRelated(relatedResult.data || []);
       setPrices(Object.fromEntries((pricesResult.data || []).map((row) => [String(row.ticker).toUpperCase(), row])));
+      setAuthor((profilesResult.data || []).find((row) => row.id === recommendationResult.data?.created_by) || null);
       setLoading(false);
     };
     load();
@@ -51,9 +55,9 @@ export default function IdeaDetail() {
   const risks = splitResearchPoints(item.risks);
   const catalysts = splitResearchPoints(item.catalysts || item.positives);
   const action = item.action_status || "invest";
-  const analystName = item.analyst_name || (isArabic ? "فريق أبحاث ALPHA CORE" : "ALPHA CORE Research Desk");
-  const analystTitle = item.analyst_title || (isArabic ? "تحليل الأسهم المصرية" : "Egyptian Equities Research");
-  const analystBio = item.analyst_bio || (isArabic ? "فريق بحثي يركز على التحليل الأساسي والتقييم وقياس أداء الفكرة مقابل المؤشر طوال فترة التوصية." : "An independent research desk focused on fundamental analysis, valuation and benchmark-relative measurement throughout the life of each recommendation.");
+  const analystName = author?.full_name || item.analyst_name || (isArabic ? "فريق أبحاث ALPHA CORE" : "ALPHA CORE Research Desk");
+  const analystTitle = author?.title || author?.position || item.analyst_title || (isArabic ? "تحليل الأسهم المصرية" : "Egyptian Equities Research");
+  const analystBio = author?.bio || item.analyst_bio || (isArabic ? "فريق بحثي يركز على التحليل الأساسي والتقييم وقياس أداء الفكرة مقابل المؤشر طوال فترة التوصية." : "An independent research desk focused on fundamental analysis, valuation and benchmark-relative measurement throughout the life of each recommendation.");
   const egx70Alpha = item.egx70_alpha ?? item.alpha_vs_egx70 ?? null;
   const progress = Math.min(100, Math.max(0, ((Number(metrics.currentPrice) - Number(item.entry_price)) / Math.max(0.0001, Number(item.target_price) - Number(item.entry_price))) * 100));
   const aiSummary = isArabic
@@ -108,7 +112,7 @@ export default function IdeaDetail() {
           </div>
 
           <aside className="recommendation-side-v3">
-            <article className="analyst-profile-v3 panel-v21"><div className="analyst-cover-v3"><span className="analyst-avatar-v3">{item.analyst_photo_url ? <img src={item.analyst_photo_url} alt=""/> : <UserRound/>}</span><i>ALPHA RESEARCH</i></div><div className="analyst-body-v3"><span className="eyebrow">ANALYST PROFILE</span><h3>{analystName}</h3><small>{analystTitle}</small><p>{analystBio}</p><div className="analyst-stats-v3"><span><b>{item.analyst_experience_years || "—"}</b><small>{isArabic ? "سنوات خبرة" : "Years experience"}</small></span><span><b>{item.analyst_success_rate == null ? "—" : formatPercent(item.analyst_success_rate)}</b><small>{isArabic ? "نسبة نجاح" : "Success rate"}</small></span><span><b>{item.analyst_average_return == null ? "—" : formatPercent(item.analyst_average_return)}</b><small>{isArabic ? "متوسط عائد" : "Average return"}</small></span><span><b>{item.analyst_alpha_generated == null ? "—" : formatPercent(item.analyst_alpha_generated)}</b><small>{isArabic ? "ألفا مولدة" : "Alpha generated"}</small></span></div><div className="analyst-badge-v3"><Award size={16}/>{isArabic ? "تحليل مستقل قائم على البيانات" : "Independent, data-led research"}</div></div></article>
+            <article className="analyst-profile-v3 panel-v21"><div className="analyst-cover-v3"><span className="analyst-avatar-v3">{(author?.avatar_url || author?.photo_url || item.analyst_photo_url) ? <img src={author?.avatar_url || author?.photo_url || item.analyst_photo_url} alt=""/> : <UserRound/>}</span><i>ALPHA RESEARCH</i></div><div className="analyst-body-v3"><span className="eyebrow">ANALYST PROFILE</span><h3>{analystName}</h3><small>{analystTitle}</small><p>{analystBio}</p><div className="analyst-stats-v3"><span><b>{item.analyst_experience_years || "—"}</b><small>{isArabic ? "سنوات خبرة" : "Years experience"}</small></span><span><b>{item.analyst_success_rate == null ? "—" : formatPercent(item.analyst_success_rate)}</b><small>{isArabic ? "نسبة نجاح" : "Success rate"}</small></span><span><b>{item.analyst_average_return == null ? "—" : formatPercent(item.analyst_average_return)}</b><small>{isArabic ? "متوسط عائد" : "Average return"}</small></span><span><b>{item.analyst_alpha_generated == null ? "—" : formatPercent(item.analyst_alpha_generated)}</b><small>{isArabic ? "ألفا مولدة" : "Alpha generated"}</small></span></div><div className="analyst-badge-v3"><Award size={16}/>{isArabic ? "تحليل مستقل قائم على البيانات" : "Independent, data-led research"}</div>{item.created_by && <Link className="analyst-profile-link-v32" to={`/analysts/${item.created_by}`}>{isArabic ? "فتح الملف الكامل" : "Open full profile"}<ArrowUpRight size={14}/></Link>}</div></article>
 
             <article className="panel-v21 latest-update-v3"><span className="eyebrow">LATEST UPDATE</span>{updates[0] ? <><h3>{updates[0].title}</h3><small>{new Date(`${updates[0].update_date}T12:00:00`).toLocaleDateString(locale)}</small><p>{updates[0].body}</p></> : <p>{isArabic ? "لم يتم نشر تحديث بعد." : "No update has been published yet."}</p>}</article>
 
@@ -118,6 +122,7 @@ export default function IdeaDetail() {
 
         {related.length > 0 && <section className="related-research-v3"><div className="panel-heading-v21"><div><span className="eyebrow">RELATED RESEARCH</span><h2>{isArabic ? "أبحاث أخرى قد تهمك" : "More research you may find useful"}</h2></div></div><div>{related.map((relatedItem) => { const relatedMetrics = recommendationMetrics(relatedItem, prices); return <Link to={`/recommendations/${relatedItem.id}`} key={relatedItem.id}><CompanyMark ticker={relatedItem.ticker}/><span><b>{relatedItem.company_name}</b><small>{relatedItem.title}</small></span><em className={relatedMetrics.returnPct >= 0 ? "positive" : "negative"}>{formatPercent(relatedMetrics.returnPct)}</em><ArrowUpRight size={15}/></Link>; })}</div></section>}
 
+        <AuthorAttribution profile={author} authorId={item.created_by} label={isArabic ? "أعدها ونشرها" : "RESEARCHED & PUBLISHED BY"}/>
         <footer className="report-disclaimer-v21"><ShieldAlert size={14}/>{isArabic ? "هذه التوصية مبنية على تحليل أساسي عام ولا تمثل نصيحة استثمارية شخصية. السعر المستهدف تقديري وقد لا يتحقق." : "This idea is based on general fundamental analysis and is not personalised investment advice. The target price is an estimate and may not be achieved."}</footer>
       </main>
     </div>

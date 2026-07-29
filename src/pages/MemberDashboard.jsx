@@ -5,10 +5,12 @@ import jsPDF from "jspdf";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Link, useParams } from "react-router-dom";
 import Brand from "../components/Brand";
+import AuthorAttribution from "../components/AuthorAttribution";
 import CompanyMark from "../components/CompanyMark";
 import DashboardHeader from "../components/DashboardHeader";
 import InsightDrawer from "../components/InsightDrawer";
 import KpiCard from "../components/KpiCard";
+import MarketNewsWidget from "../components/MarketNewsWidget";
 import PerformanceChart from "../components/PerformanceChart";
 import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
@@ -37,12 +39,18 @@ async function loadPublishedData() {
   ]);
   const error = portfolioResult.error || monthResult.error || recommendationResult.error || reportResult.error || priceResult.error;
   if (error) throw error;
+  const optional = await Promise.allSettled([
+    supabase.from("recommendation_updates").select("*").order("update_date", { ascending: false }).limit(12),
+    supabase.from("profiles").select("*"),
+  ]);
   return {
     portfolios: portfolioResult.data || [],
     months: monthResult.data || [],
     recommendations: recommendationResult.data || [],
     reports: reportResult.data || [],
     priceRows: priceResult.data || [],
+    updates: optional[0].status === "fulfilled" ? optional[0].value.data || [] : [],
+    profiles: optional[1].status === "fulfilled" ? optional[1].value.data || [] : [],
   };
 }
 
@@ -55,6 +63,8 @@ export default function MemberDashboard() {
   const [allMonths, setAllMonths] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [reports, setReports] = useState([]);
+  const [updates, setUpdates] = useState([]);
+  const [profiles, setProfiles] = useState([]);
   const [prices, setPrices] = useState({});
   const [selectedPortfolioId, setSelectedPortfolioId] = useState("");
   const [selectedKey, setSelectedKey] = useState("");
@@ -72,6 +82,8 @@ export default function MemberDashboard() {
       setAllMonths(data.months);
       setRecommendations(data.recommendations);
       setReports(data.reports);
+      setUpdates(data.updates || []);
+      setProfiles(data.profiles || []);
       setPrices(Object.fromEntries(data.priceRows.map((row) => [String(row.ticker).toUpperCase(), row])));
       setSelectedPortfolioId((current) => {
         const requestedPortfolio = slug ? data.portfolios.find((item) => item.slug === slug) : null;
@@ -98,6 +110,8 @@ export default function MemberDashboard() {
       .on("postgres_changes", { event: "*", schema: "public", table: "swaps" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "recommendations" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "weekly_reports" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "recommendation_updates" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, refresh)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
@@ -120,6 +134,7 @@ export default function MemberDashboard() {
   const worstHolding = [...(metrics.rows || [])].sort((a, b) => Number(a.mtd || 0) - Number(b.mtd || 0))[0];
   const allocationData = (metrics.rows || []).map((row) => ({ name: row.ticker, value: Number(row.weight || 0) }));
   const portfolioTitle = isArabic && currentPortfolio?.name_ar ? currentPortfolio.name_ar : currentPortfolio?.name;
+  const portfolioAuthor = profiles.find((item) => item.id === currentPortfolio?.created_by) || null;
 
   const changePortfolio = (id) => {
     setSelectedPortfolioId(id);
@@ -168,7 +183,7 @@ export default function MemberDashboard() {
         pdf.addImage(imgData, "JPEG", 0, position, pageWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-      pdf.save(`ALPHA-PLATFORM-${currentPortfolio?.slug || "PORTFOLIO"}-${selected?.month_key || "REPORT"}-V3.1.pdf`);
+      pdf.save(`ALPHA-PLATFORM-${currentPortfolio?.slug || "PORTFOLIO"}-${selected?.month_key || "REPORT"}-V3.2.pdf`);
       window.dispatchEvent(new CustomEvent("alpha:meaningful-action", { detail: { action: "export_portfolio_pdf" } }));
       setMessage("");
     } catch (error) {
@@ -246,8 +261,10 @@ export default function MemberDashboard() {
             <article className="panel-v21 recent-activity-v3"><span className="eyebrow">RECENT ACTIVITY</span><h3>{isArabic ? "آخر ما تغير" : "What changed recently"}</h3><div>{recentUpdates.map((row) => <button key={row.month} onClick={() => setSelectedKey(row.month)}><span className={row.isClosed ? "final" : "live"}/><div><b>{monthLabel(row.month, false, locale)}</b><small>{row.isClosed ? t("final") : t("live")}</small></div><em className={row.alpha >= 0 ? "positive" : "negative"}>{formatPercent(row.alpha)}</em></button>)}</div></article>
           </section>
 
+          <MarketNewsWidget reports={reports} recommendations={recommendations} updates={updates} isArabic={isArabic} locale={locale}/>
+
           <section className="factsheet-hero-v3">
-            <div className="factsheet-title-v3"><span className="eyebrow">ALPHA CORE · PORTFOLIO FACTSHEET</span><h2>{portfolioTitle}</h2><p>{currentPortfolio?.description || selected.public_commentary || t("dashboardSubtitle")}</p><div className="factsheet-meta-v3"><span><small>{isArabic ? "مدير المحفظة" : "Manager"}</small><b>{currentPortfolio?.manager_name || "ALPHA CORE Investment Committee"}</b></span><span><small>{isArabic ? "الاستراتيجية" : "Strategy"}</small><b>{currentPortfolio?.strategy_name || (isArabic ? "أسهم مصرية مركزة" : "Focused Egyptian equities")}</b></span><span><small>{isArabic ? "تاريخ الإطلاق" : "Launch date"}</small><b>{months[0]?.month_key ? monthLabel(months[0].month_key, false, locale) : "—"}</b></span><span><small>{t("lastUpdated")}</small><b>{dateTimeLabel(selected.updated_at, locale)}</b></span></div></div><div className="factsheet-status-v3"><span className={`status-pill ${selected.is_closed ? "final" : "live"}`}>{selected.is_closed ? t("final") : t("live")}</span><b>{formatPercent(selectedReturns.portfolio - selectedReturns.benchmark)}</b><small>MONTHLY ALPHA</small></div>
+            <div className="factsheet-title-v3"><span className="eyebrow">ALPHA CORE · PORTFOLIO FACTSHEET</span><h2>{portfolioTitle}</h2><p>{currentPortfolio?.description || selected.public_commentary || t("dashboardSubtitle")}</p><div className="factsheet-meta-v3"><span><small>{isArabic ? "مدير المحفظة" : "Manager"}</small><b>{currentPortfolio?.manager_name || "ALPHA CORE Investment Committee"}</b></span><span><small>{isArabic ? "الاستراتيجية" : "Strategy"}</small><b>{currentPortfolio?.strategy_name || (isArabic ? "أسهم مصرية مركزة" : "Focused Egyptian equities")}</b></span><span><small>{isArabic ? "تاريخ الإطلاق" : "Launch date"}</small><b>{months[0]?.month_key ? monthLabel(months[0].month_key, false, locale) : "—"}</b></span><span><small>{t("lastUpdated")}</small><b>{dateTimeLabel(selected.updated_at, locale)}</b></span></div><AuthorAttribution profile={portfolioAuthor} authorId={currentPortfolio?.created_by} compact label={isArabic ? "أنشأها ويديرها" : "CREATED & MANAGED BY"}/></div><div className="factsheet-status-v3"><span className={`status-pill ${selected.is_closed ? "final" : "live"}`}>{selected.is_closed ? t("final") : t("live")}</span><b>{formatPercent(selectedReturns.portfolio - selectedReturns.benchmark)}</b><small>MONTHLY ALPHA</small></div>
           </section>
 
           <section className="kpi-grid-v21 factsheet-kpis-v3">
@@ -286,6 +303,8 @@ export default function MemberDashboard() {
           </section>
 
           <section className="guidance-v21 guidance-v3"><div><span className="eyebrow">INVESTOR GUIDANCE</span><h2>{selected.investor_guidance_title || t("investorGuidance")}</h2><p>{selected.investor_guidance || "—"}</p></div><div className="best-worst-v3"><article><TrendingUp/><span><small>{isArabic ? "أفضل سهم" : "Best performer"}</small><b>{bestHolding?.ticker || "—"}</b><em className="positive">{formatPercent(bestHolding?.mtd)}</em></span></article><article><TrendingDown/><span><small>{isArabic ? "أضعف سهم" : "Worst performer"}</small><b>{worstHolding?.ticker || "—"}</b><em className="negative">{formatPercent(worstHolding?.mtd)}</em></span></article></div></section>
+
+          <div className="portfolio-bottom-author-v32"><AuthorAttribution profile={portfolioAuthor} authorId={currentPortfolio?.created_by} label={isArabic ? "أنشأها ويديرها" : "CREATED & MANAGED BY"}/></div>
 
           <footer className="report-disclaimer-v21"><ShieldCheck size={14}/>{t("footer")}</footer>
         </main>

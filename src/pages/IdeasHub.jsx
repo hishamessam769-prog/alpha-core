@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, BadgeCheck, Clock3, Crosshair, Filter, Gauge, PauseCircle, Search, SlidersHorizontal, Sparkles, Target, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
+import AuthorAttribution from "../components/AuthorAttribution";
 import CompanyMark from "../components/CompanyMark";
 import DashboardHeader from "../components/DashboardHeader";
 import InsightDrawer from "../components/InsightDrawer";
@@ -15,6 +16,7 @@ export default function IdeasHub() {
   const locale = isArabic ? "ar-EG" : "en-GB";
   const [recommendations, setRecommendations] = useState([]);
   const [prices, setPrices] = useState({});
+  const [profiles, setProfiles] = useState({});
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("latest");
@@ -23,13 +25,15 @@ export default function IdeasHub() {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: recs, error: recError }, { data: priceRows, error: priceError }] = await Promise.all([
+    const [{ data: recs, error: recError }, { data: priceRows, error: priceError }, profileResult] = await Promise.all([
       supabase.from("recommendations").select("*").eq("is_published", true).order("recommendation_date", { ascending: false }),
       supabase.from("market_prices").select("ticker, company_name, close_price, price_date"),
+      supabase.from("profiles").select("*"),
     ]);
     if (recError || priceError) setMessage(recError?.message || priceError?.message || "");
     setRecommendations(recs || []);
     setPrices(Object.fromEntries((priceRows || []).map((row) => [String(row.ticker).toUpperCase(), row])));
+    setProfiles(Object.fromEntries((profileResult.data || []).map((row) => [row.id, row])));
     setLoading(false);
   };
 
@@ -81,7 +85,7 @@ export default function IdeasHub() {
 
         {featured && featuredMetrics && <section className="featured-recommendation-v3">
           <div className="featured-visual-v3"><CompanyMark ticker={featured.ticker} name={featured.company_name} image={featured.company_logo_url} size="large"/><span>{featured.sector || (isArabic ? "أسهم مصرية" : "Egyptian equities")}</span><i>FEATURED</i></div>
-          <div className="featured-copy-v3"><div className="featured-status-v3"><span className={`action-pill-v23 ${featured.action_status || "invest"}`}>{recommendationActionLabel(featured.action_status || "invest", isArabic)}</span><span className={`status-pill small ${featuredMetrics.isOpen ? "live" : "final"}`}>{recommendationStatusLabel(featured.status, isArabic)}</span></div><h2>{featured.company_name}</h2><h3>{featured.title}</h3><p>{featured.why_selected || featured.company_story || (isArabic ? "افتح التوصية لقراءة الفرضية الاستثمارية والتقييم والمخاطر." : "Open the recommendation to read the full investment thesis, valuation and risk case.")}</p><div className="featured-metrics-v3"><span><small>{isArabic ? "سعر الدخول" : "Entry"}</small><b>{formatNumber(featured.entry_price, 2, locale)}</b></span><span><small>{isArabic ? "السعر الحالي" : "Current"}</small><b>{formatNumber(featuredMetrics.currentPrice, 2, locale)}</b></span><span><small>{isArabic ? "المستهدف" : "Target"}</small><b>{formatNumber(featured.target_price, 2, locale)}</b></span><span><small>{isArabic ? "المتبقي" : "Upside"}</small><b className={featuredMetrics.upsideToTarget >= 0 ? "positive" : "negative"}>{formatPercent(featuredMetrics.upsideToTarget)}</b></span></div><Link className="button gold" to={`/recommendations/${featured.id}`}>{isArabic ? "اقرأ التوصية الكاملة" : "Read the full recommendation"}<ArrowUpRight size={15}/></Link></div>
+          <div className="featured-copy-v3"><div className="featured-status-v3"><span className={`action-pill-v23 ${featured.action_status || "invest"}`}>{recommendationActionLabel(featured.action_status || "invest", isArabic)}</span><span className={`status-pill small ${featuredMetrics.isOpen ? "live" : "final"}`}>{recommendationStatusLabel(featured.status, isArabic)}</span></div><h2>{featured.company_name}</h2><h3>{featured.title}</h3><p>{featured.why_selected || featured.company_story || (isArabic ? "افتح التوصية لقراءة الفرضية الاستثمارية والتقييم والمخاطر." : "Open the recommendation to read the full investment thesis, valuation and risk case.")}</p><div className="featured-metrics-v3"><span><small>{isArabic ? "سعر الدخول" : "Entry"}</small><b>{formatNumber(featured.entry_price, 2, locale)}</b></span><span><small>{isArabic ? "السعر الحالي" : "Current"}</small><b>{formatNumber(featuredMetrics.currentPrice, 2, locale)}</b></span><span><small>{isArabic ? "المستهدف" : "Target"}</small><b>{formatNumber(featured.target_price, 2, locale)}</b></span><span><small>{isArabic ? "المتبقي" : "Upside"}</small><b className={featuredMetrics.upsideToTarget >= 0 ? "positive" : "negative"}>{formatPercent(featuredMetrics.upsideToTarget)}</b></span></div><AuthorAttribution profile={profiles[featured.created_by]} authorId={featured.created_by} compact/><Link className="button gold" to={`/recommendations/${featured.id}`}>{isArabic ? "اقرأ التوصية الكاملة" : "Read the full recommendation"}<ArrowUpRight size={15}/></Link></div>
         </section>}
 
         <section className="research-toolbar-v22 research-toolbar-v3" id="research-library">
@@ -102,7 +106,7 @@ export default function IdeasHub() {
                 <div className="potential-hero-v23"><span><small>{isArabic ? "المتبقي للمستهدف" : "Remaining upside"}</small><b className={metrics.upsideToTarget >= 0 ? "positive" : "negative"}>{formatPercent(metrics.upsideToTarget)}</b></span><Target size={24}/></div>
                 <div className="research-card-metrics-v22"><Metric label={isArabic ? "دخول" : "Entry"} value={formatNumber(item.entry_price, 2, locale)}/><Metric label={isArabic ? "حالي" : "Current"} value={formatNumber(metrics.currentPrice, 2, locale)}/><Metric label={isArabic ? "مستهدف" : "Target"} value={formatNumber(item.target_price, 2, locale)}/></div>
                 <div className="research-return-strip-v22"><span><small>{isArabic ? "العائد" : "Return"}</small><b className={metrics.returnPct >= 0 ? "positive" : "negative"}>{formatPercent(metrics.returnPct)}</b></span><span><small>EGX30</small><b className={metrics.benchmarkReturn >= 0 ? "gold-text" : "negative"}>{formatPercent(metrics.benchmarkReturn)}</b></span><span><small>Alpha</small><b className={metrics.alpha >= 0 ? "positive" : "negative"}>{formatPercent(metrics.alpha)}</b></span></div>
-                <footer><span>{metrics.durationDays} {isArabic ? "يوم" : "days"} · {dateTimeLabel(item.updated_at, locale)}</span><b>{isArabic ? "عرض" : "Open"}<ArrowUpRight size={14}/></b></footer>
+                <footer className="research-card-author-footer-v32"><AuthorAttribution profile={profiles[item.created_by]} authorId={item.created_by} compact/><b>{isArabic ? "عرض" : "Open"}<ArrowUpRight size={14}/></b></footer>
               </Link>;
             })}
             {!visible.length && <div className="empty-state-v21 research-empty-v3"><Search size={44}/><h2>{isArabic ? "لا توجد نتائج مطابقة" : "No matching recommendations"}</h2><p>{isArabic ? "جرّب تغيير الفلتر أو البحث باسم آخر." : "Try another filter or search term."}</p></div>}

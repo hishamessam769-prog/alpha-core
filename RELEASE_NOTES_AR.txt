@@ -1,26 +1,18 @@
-ALPHA PLATFORM V3.1 — INCREMENTAL EXPERIENCE UPDATE
+ALPHA PLATFORM V3.2 — MARKET INTELLIGENCE EXPERIENCE
 
-الحفاظ الكامل
-- جميع Routes القديمة محفوظة.
-- Authentication وProfiles وAdmin وSuper Admin محفوظة.
-- الحسابات وPortfolio Logic وRecommendation Logic محفوظة.
-- PDF Export وMarketing Package وActivity Log والحذف الآمن محفوظة.
-- ملفات الحسابات الأساسية لم تتغير.
+UI/UX ONLY + COMPATIBILITY-SAFE MODULES
 
-التحديثات
-1. Investment Thesis لكل Holding في Admin وMember Dashboard وPortfolio PDF.
-2. إصلاح Table Header overlap على Desktop وTablet وMobile.
-3. Admin Settings ديناميكية للشعار والفوتر والتواصل والأسعار والـLanding Highlights.
-4. Logo موحد في Header وFooter وكل تقارير PDF الرئيسية.
-5. Redirect تلقائي للمستخدم المسجل من Landing إلى Dashboard.
-6. Public performance highlights مبنية على أحدث بيانات منشورة.
-7. Copy Direct Link للمحفظة.
-8. Support chat للمستخدم وMessenger Inbox للإدارة.
-9. الرد داخل المنصة أو فتح البريد مع تسجيل الرد في Support History.
-10. Smart Survey 1–5 + تعليق، مع Admin Analytics.
-11. Light/Dark Mode محفوظ بين الجلسات.
+- New animated financial design layer and scroll reveals.
+- New Portfolio Library with premium performance cards.
+- New Market News & Economic Events dashboard widget.
+- New News & Analysis index using existing published content.
+- New rich article experience with image and video URL embedding.
+- New public analyst/author profiles and complete publication history.
+- Automatic author attribution across portfolios, recommendations, reports and news surfaces.
+- New Super Admin Team & Access interface using current profile flags.
+- Existing Month/Date selector preserved inside portfolio pages.
+- Stronger table stability, contrast and mobile overflow handling.
+- No new database migration and no backend/business-logic changes.
 
-قاعدة البيانات
-- Upgrade additive فقط.
-- لا توجد عمليات DROP أو إعادة تسمية للجداول الحالية.
-- RLS يمنع المستخدم من رؤية رسائل أي مستخدم آخر.
+COMPATIBILITY NOTE
+Analyst/Instructor roles and granular permission persistence are available only when compatible fields already exist. V3.2 does not add or alter schema fields.

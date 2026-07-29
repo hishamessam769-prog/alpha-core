@@ -1,0 +1,43 @@
+ALPHA PLATFORM V3.2 — VALIDATION REPORT
+Generated: 2026-07-29
+
+1. SOURCE PARSING
+- 54 JavaScript/JSX files parsed successfully with TypeScript JSX parser.
+- 0 syntax-error files.
+- 214 local imports checked; 0 missing local modules.
+- CSS parsed successfully with PostCSS (balanced syntax).
+
+2. ROUTE COMPATIBILITY
+- Existing V3.1 routes preserved: 22/22.
+- Removed existing routes: none.
+- Additive routes: /admin/team, /analysts/:id, /news, /news/:kind/:id, /portfolios.
+
+3. BACKEND / BUSINESS LOGIC INTEGRITY
+- src/lib/calculations.js: BYTE-FOR-BYTE MATCH | SHA-256 0a17267e5a1cab5b3d1943882118ac6353acc50238f17bffcd6c9750aaa40855
+- src/lib/recommendations.js: BYTE-FOR-BYTE MATCH | SHA-256 120bd7522eb189139cd0ed27ea0f954278448dc2853c0794c0cae73c27e354cc
+- src/lib/reporting.js: BYTE-FOR-BYTE MATCH | SHA-256 a6c5baec42292992b83b7433fee788382ed057ce06d72201192a868fc68efd0e
+- src/lib/zip.js: BYTE-FOR-BYTE MATCH | SHA-256 ffa408a54de5055069c4bd0b1d2b7b1ad0379e0904e0f5a0357790c9567321f8
+- src/lib/supabase.js: BYTE-FOR-BYTE MATCH | SHA-256 2600c7bde94a88fbd18b801b2cfa69f36156fb8a9c2372678538ab8b247c9946
+- src/context/AuthContext.jsx: BYTE-FOR-BYTE MATCH | SHA-256 02e273f432ddce08fef368260e37143a1952ae591111cd7e1b267b1c797c6ea7
+- src/components/ProtectedRoute.jsx: BYTE-FOR-BYTE MATCH | SHA-256 a67a6af595b9bcc801dcc505dab9702d8f7368e058f111f36aa633d3250c7be6
+- supabase/upgrade-v3.1.sql: BYTE-FOR-BYTE MATCH | SHA-256 1c6d5b686de54642d818bd97e178c2022d1744508c3f504f895a8187eceb18b1
+- New database migrations: none.
+- Existing V3.1 SQL retained unchanged for repository continuity; do not rerun it when V3.1 is already installed.
+
+4. MODULE SAFETY
+- Newsroom aggregates existing published weekly reports, recommendations and recommendation updates.
+- Rich media rendering uses URLs stored in existing text fields; no media table added.
+- Author attribution reads existing created_by/profile data and falls back safely when a profile is unavailable.
+- Team & Access uses existing is_admin/is_super_admin flags and Supabase OTP invitation.
+- Analyst/Instructor/granular permission persistence is enabled only when compatible fields already exist.
+
+5. RESPONSIVE / ACCESSIBILITY CHECKS
+- Desktop, tablet and mobile breakpoints added for every new module.
+- Horizontal table overflow and sticky-header stacking corrected.
+- prefers-reduced-motion respected by scroll and market animations.
+- Dark/light theme overrides included for new surfaces.
+
+6. BUILD ENVIRONMENT
+- npm install/build could not run in this isolated environment because the configured package registry returned 404 for @supabase/supabase-js.
+- This is an environment dependency-fetch limitation, not a detected source error.
+- JSX syntax, import graph, CSS syntax, route preservation and protected-file integrity checks passed.

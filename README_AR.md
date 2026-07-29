@@ -1,57 +1,70 @@
-# ALPHA PLATFORM V3.1
+# ALPHA PLATFORM V3.2
 
-تحديث Incremental فوق النسخة الحالية V3.0. لم يتم إنشاء مشروع جديد، ولم يتم تغيير منطق المحافظ أو التوصيات أو الحسابات أو تسجيل الدخول أو صلاحيات V2.3.1.
+تحديث واجهة وتجربة استخدام Modular فوق ALPHA PLATFORM V3.1 الحالية.
 
-## ترتيب الرفع الصحيح
+## مهم جدًا قبل الرفع
 
-1. افتح Supabase SQL Editor.
-2. شغّل ملف `upgrade-v3.1.sql` مرة واحدة فقط.
-3. ارفع محتويات المشروع إلى نفس GitHub repository الحالي.
-4. اعمل Redeploy من Vercel باستخدام نفس Environment Variables الحالية.
+- لا يوجد أي SQL جديد في V3.2.
+- لا تشغّل Migration إضافي لهذا التحديث.
+- قاعدة البيانات والـBackend والـAuthentication والحسابات والـAPIs القديمة لم يتم تغييرها.
+- ملف `supabase/upgrade-v3.1.sql` موجود فقط لأنه جزء من المشروع السابق، ولا يحتاج لإعادة التشغيل إذا كانت V3.1 تعمل حاليًا.
 
-## ما أضافه SQL
+## طريقة الرفع
 
-- عمود `investment_thesis` داخل holdings.
-- جدول `platform_settings` لإدارة الشعار والفوتر والأسعار وإحصائيات Landing Page.
-- Storage bucket باسم `platform-assets` لرفع الشعار.
-- جداول `support_threads` و`support_messages` للمحادثات وسجل الدعم.
-- جدول `survey_responses` للاستبيان وتحليلاته.
-- RLS Policies آمنة: المستخدم يرى محادثاته فقط، والإدارة ترى Inbox كاملًا.
-- Public RPC يعرض Highlights من البيانات المنشورة فقط.
+1. فك ضغط الملف.
+2. انسخ محتويات المشروع إلى مستودع GitHub الحالي مع استبدال ملفات الواجهة.
+3. اترك متغيرات Vercel الحالية كما هي:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+4. نفّذ Redeploy على Vercel.
 
-كل التغييرات Additive ولا تحذف أو تعيد تسمية أي جدول أو عمود موجود.
+## ما الجديد في V3.2
 
-## أهم التحديثات
+### تجربة بصرية وحركة
+- Scroll reveal animations بدون إضافة dependency جديدة.
+- Financial market SVG graphics وحركات خفيفة تراعي `prefers-reduced-motion`.
+- تحسينات Micro-interactions وحالات Skeleton.
+- Responsive كامل للموبايل والتابلت والكمبيوتر.
 
-- Investment Thesis لكل سهم داخل المحفظة وفي Admin وPDF.
-- إصلاح نهائي لتداخل رؤوس الجداول مع الصفوف، مع Horizontal Scroll متجاوب.
-- Admin Settings ديناميكية للشعار والفوتر والتواصل والأسعار والـLanding Highlights.
-- الشعار المرفوع يظهر تلقائيًا في Header وFooter وتقارير المحافظ والتقارير الأسبوعية وPDF Report Studio.
-- المستخدم المسجل يتحول مباشرة إلى Dashboard بدل Landing Page العامة.
-- Performance Highlights عامة في Landing Page.
-- Copy Direct Link لكل محفظة عبر `/portfolio/:slug`.
-- Contact/Feedback Chat للمستخدم مع إرفاق Name وEmail وUser ID تلقائيًا.
-- Admin Messenger Inbox مع الرد داخل المنصة أو عبر البريد وسجل كامل للمحادثة.
-- Smart Survey غير مزعج، بحد أقصى مرة كل 14 يومًا لكل مستخدم.
-- Survey Analytics داخل Admin.
-- Light/Dark Theme محفوظ في LocalStorage.
+### الأخبار والتحليل
+- Market News & Economic Events widget داخل Dashboard.
+- صفحة News & Analysis موحدة.
+- Rich Article View يدعم النص المنسق وروابط الصور وYouTube وVimeo.
+- الأخبار تستخدم البيانات المنشورة الموجودة بالفعل: التقارير الأسبوعية والتوصيات وتحديثاتها، بدون إنشاء جدول جديد.
 
-## التشغيل المحلي
+### المحافظ
+- صفحة Portfolios Index جديدة ببطاقات Performance مرئية.
+- Quick return وAlpha وBenchmark وعدد المراكز وآخر شهر.
+- اسم وصورة منشئ المحفظة مع رابط الملف العام.
+- صفحة المحفظة الداخلية وحساباتها كما هي، مع الحفاظ على Month/Date selector وتحسين وضوح الجداول.
 
-```bash
-npm install
-npm run dev
-```
+### ملفات المحللين
+- صفحة عامة لكل Author تعرض السيرة والدور.
+- المحافظ التي أنشأها.
+- التوصيات المفتوحة والمغلقة.
+- التقارير والأبحاث المنشورة.
+- مؤشرات Success Rate وAverage Return وHolding Period وAlpha.
 
-## Production Build
+### الفريق والصلاحيات
+- صفحة Team & Access للـSuper Admin.
+- دعوة حسابات جديدة عبر Supabase OTP القياسي.
+- إدارة Member وAdmin وSuper Admin باستخدام الحقول الحالية.
+- Analyst وInstructor وGranular Permissions تعمل تلقائيًا فقط إذا كانت الحقول المقابلة موجودة أصلًا في قاعدة البيانات.
 
-```bash
-npm run build
-```
+## ملاحظة RBAC صريحة
 
-## ملاحظات
+لأن المطلوب يمنع أي تغيير في قاعدة البيانات أو الـBackend، لا يمكن فرض Roles جديدة أو Granular Permissions جديدة على مستوى أمني دائم إذا لم تكن أعمدتها موجودة بالفعل. لذلك V3.2 تعمل بوضع توافق آمن:
 
-- استخدم ملف SQL الخاص بـV3.1 فقط على قاعدة البيانات الحالية.
-- لا تنشئ Supabase project جديدًا.
-- لا تغيّر مفاتيح Vercel أو Supabase الحالية.
-- روابط المحافظ تظل خاضعة لنظام تسجيل الدخول والصلاحيات الحالي.
+- تستخدم `is_admin` و`is_super_admin` الحاليين فعليًا.
+- لا تدّعي حفظ Analyst أو Instructor أو Permission Matrix في قاعدة لا تحتوي حقولها.
+- تعرض رسالة واضحة داخل Admin بدل إجراء تعديل غير آمن أو كسر النظام.
+
+## Routes المضافة
+
+- `/portfolios`
+- `/news`
+- `/news/:kind/:id`
+- `/analysts/:id`
+- `/admin/team`
+
+كل Routes V3.1 القديمة ما زالت موجودة بدون حذف أو تغيير.
