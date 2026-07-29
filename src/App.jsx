@@ -20,6 +20,7 @@ import NewsAnalysis from "./pages/NewsAnalysis";
 import NewsArticle from "./pages/NewsArticle";
 import AnalystProfile from "./pages/AnalystProfile";
 import AdminTeam from "./pages/AdminTeam";
+import PublishingStudio from "./pages/PublishingStudio";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SupportWidget from "./components/SupportWidget";
 import SmartSurvey from "./components/SmartSurvey";
@@ -51,13 +52,14 @@ export default function App() {
         <Route path="/news/:kind/:id" element={<ProtectedRoute><NewsArticle /></ProtectedRoute>} />
         <Route path="/analysts/:id" element={<ProtectedRoute><AnalystProfile /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
-        <Route path="/admin/recommendations" element={<ProtectedRoute adminOnly><RecommendationAdmin /></ProtectedRoute>} />
-        <Route path="/admin/weekly-reports" element={<ProtectedRoute adminOnly><WeeklyReportsAdmin /></ProtectedRoute>} />
-        <Route path="/admin/prices" element={<ProtectedRoute adminOnly><PriceImportAdmin /></ProtectedRoute>} />
-        <Route path="/admin/support" element={<ProtectedRoute adminOnly><AdminSupport /></ProtectedRoute>} />
-        <Route path="/admin/settings" element={<ProtectedRoute adminOnly><AdminSettings /></ProtectedRoute>} />
-        <Route path="/admin/team" element={<ProtectedRoute adminOnly><AdminTeam /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute adminOnly permission="manage_portfolios"><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/recommendations" element={<ProtectedRoute adminOnly permission="manage_recommendations"><RecommendationAdmin /></ProtectedRoute>} />
+        <Route path="/admin/weekly-reports" element={<ProtectedRoute adminOnly permission="manage_reports"><WeeklyReportsAdmin /></ProtectedRoute>} />
+        <Route path="/admin/prices" element={<ProtectedRoute adminOnly anyPermission={["manage_portfolios", "manage_recommendations"]}><PriceImportAdmin /></ProtectedRoute>} />
+        <Route path="/admin/support" element={<ProtectedRoute adminOnly permission="support_inbox"><AdminSupport /></ProtectedRoute>} />
+        <Route path="/admin/settings" element={<ProtectedRoute adminOnly permission="manage_settings"><AdminSettings /></ProtectedRoute>} />
+        <Route path="/admin/team" element={<ProtectedRoute superAdminOnly><AdminTeam /></ProtectedRoute>} />
+        <Route path="/admin/publishing" element={<ProtectedRoute adminOnly anyPermission={["publish_articles", "manage_reports", "manage_recommendations", "manage_portfolios"]}><PublishingStudio /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {showMemberExperience && <><SupportWidget/><SmartSurvey/></>}

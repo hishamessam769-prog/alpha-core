@@ -43,7 +43,7 @@ export default function WeeklyReportDetail() {
     if (!reportRef.current || exporting) return;
     setExporting(true);
     try {
-      const canvas = await html2canvas(reportRef.current, { scale: 1.8, backgroundColor: "#0b0f14", useCORS: true, logging: false, windowWidth: 1400 });
+      const canvas = await html2canvas(reportRef.current, { scale: 1.8, backgroundColor: "#07131f", useCORS: true, logging: false, windowWidth: 1400 });
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const width = pdf.internal.pageSize.getWidth();
       const height = (canvas.height * width) / canvas.width;
@@ -51,9 +51,9 @@ export default function WeeklyReportDetail() {
       let left = height;
       let position = 0;
       const image = canvas.toDataURL("image/jpeg", 0.94);
-      pdf.setFillColor(11, 15, 20); pdf.rect(0, 0, width, pageHeight, "F"); pdf.addImage(image, "JPEG", 0, position, width, height); left -= pageHeight;
-      while (left > 2) { position -= pageHeight; pdf.addPage(); pdf.setFillColor(11, 15, 20); pdf.rect(0, 0, width, pageHeight, "F"); pdf.addImage(image, "JPEG", 0, position, width, height); left -= pageHeight; }
-      pdf.save(`ALPHA-WEEKLY-${report.slug}-V3.2.pdf`);
+      pdf.setFillColor(7, 19, 31); pdf.rect(0, 0, width, pageHeight, "F"); pdf.addImage(image, "JPEG", 0, position, width, height); left -= pageHeight;
+      while (left > 2) { position -= pageHeight; pdf.addPage(); pdf.setFillColor(7, 19, 31); pdf.rect(0, 0, width, pageHeight, "F"); pdf.addImage(image, "JPEG", 0, position, width, height); left -= pageHeight; }
+      pdf.save(`ALPHA-WEEKLY-${report.slug}-V3.3.pdf`);
       window.dispatchEvent(new CustomEvent("alpha:meaningful-action", { detail: { action: "export_weekly_pdf" } }));
     } catch (error) { setMessage(error.message); } finally { setExporting(false); }
   };

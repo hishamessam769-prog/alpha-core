@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowUpRight, Award, BookOpen, BriefcaseBusiness, CalendarDays, CheckCircle2, Clock3, Newspaper, ShieldCheck, Sparkles, Target, TrendingUp } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Award, BookOpen, BriefcaseBusiness, CalendarDays, CheckCircle2, Clock3, Newspaper, PenSquare, ShieldCheck, Sparkles, Target, TrendingUp } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { authorDisplay } from "../components/AuthorAttribution";
 import CompanyMark from "../components/CompanyMark";
 import DashboardHeader from "../components/DashboardHeader";
 import Reveal from "../components/Reveal";
 import { useLanguage } from "../context/LanguageContext";
+import { useAuth } from "../context/AuthContext";
+import { canAccessCreatorStudio } from "../lib/access";
 import { buildMonthlyTrackRecord, dateTimeLabel, formatNumber, formatPercent } from "../lib/calculations";
 import { recommendationMetrics } from "../lib/recommendations";
 import { supabase } from "../lib/supabase";
@@ -33,6 +35,7 @@ async function loadAnalyst(id) {
 
 export default function AnalystProfile() {
   const { id } = useParams();
+  const { profile: currentProfile } = useAuth();
   const { isArabic } = useLanguage();
   const locale = isArabic ? "ar-EG" : "en-GB";
   const [data, setData] = useState(null);
@@ -73,7 +76,7 @@ export default function AnalystProfile() {
         <Link className="back-link" to="/portfolios"><ArrowLeft size={16}/>{isArabic ? "المحافظ" : "Portfolios"}</Link>
         <Reveal as="section" className="analyst-hero-v32">
           <div className="analyst-avatar-v32">{author.avatar ? <img src={author.avatar} alt={author.fullName}/> : author.initials}</div>
-          <div className="analyst-identity-v32"><span className="eyebrow">ALPHA PLATFORM · AUTHOR PROFILE</span><h1>{author.fullName}</h1><h2>{author.role}</h2><p>{author.bio}</p><div><span><ShieldCheck/>Verified platform author</span><span><CalendarDays/>Member since {new Date(data.profile.created_at || Date.now()).toLocaleDateString(locale, { month: "short", year: "numeric" })}</span></div></div>
+          <div className="analyst-identity-v32"><span className="eyebrow">ALPHA PLATFORM · AUTHOR PROFILE</span><h1>{author.fullName}</h1><h2>{author.role}</h2><p>{author.bio}</p><div><span><ShieldCheck/>Verified platform author</span><span><CalendarDays/>Member since {new Date(data.profile.created_at || Date.now()).toLocaleDateString(locale, { month: "short", year: "numeric" })}</span></div>{currentProfile?.id === id && canAccessCreatorStudio(currentProfile) && <Link className="button primary analyst-publish-v33" to="/admin/publishing"><PenSquare/>{isArabic ? "إنشاء ونشر مادة" : "Create & publish"}</Link>}</div>
           <div className="analyst-score-v32"><Award/><small>{isArabic ? "نسبة النجاح" : "SUCCESS RATE"}</small><b>{formatPercent(analytics.successRate)}</b><span>{analytics.closed.length} {isArabic ? "توصية مغلقة" : "closed calls"}</span></div>
         </Reveal>
 

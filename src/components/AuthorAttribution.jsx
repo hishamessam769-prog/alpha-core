@@ -1,9 +1,10 @@
 import { ArrowUpRight, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
+import { roleTitle } from "../lib/access";
 
 export function authorDisplay(profile, fallback = {}) {
   const fullName = profile?.full_name || fallback.full_name || fallback.name || "ALPHA Investment Committee";
-  const role = profile?.title || profile?.position || fallback.title || (profile?.is_super_admin ? "Founder & Super Admin" : profile?.is_admin ? "Platform Administrator" : "Investment Analyst");
+  const role = profile?.title || profile?.position || fallback.title || roleTitle(profile);
   const avatar = profile?.avatar_url || profile?.photo_url || profile?.profile_picture || fallback.avatar || "";
   const bio = profile?.bio || fallback.bio || "Research and portfolio intelligence published through ALPHA PLATFORM.";
   const initials = fullName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "AP";

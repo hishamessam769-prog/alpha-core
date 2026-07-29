@@ -56,7 +56,7 @@ export default function WeeklyReportsAdmin() {
     ]);
     if (error || profileError) setMessage(error?.message || profileError?.message || "");
     setProfiles(profileRows || []);
-    const rows = data || [];
+    const rows = (data || []).filter((item) => !String(item.slug || "").startsWith("market-news-") && !String(item.slug || "").startsWith("economic-update-"));
     setReports(rows);
     const selected = rows.find((item) => item.id === preferredId) || rows.find((item) => item.id === selectedId) || rows[0];
     if (selected) {

@@ -1,38 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, Copy, KeyRound, MailPlus, Search, Shield, ShieldCheck, UserCog } from "lucide-react";
+import { Check, Copy, KeyRound, MailPlus, Search, Shield, ShieldCheck, UserCog, UsersRound } from "lucide-react";
 import DashboardHeader from "../components/DashboardHeader";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
+import { ROLE_PRESETS, deriveRole, permissionSet, rolePayload, supportedProfileFields } from "../lib/access";
 import { dateTimeLabel } from "../lib/calculations";
 import { supabase } from "../lib/supabase";
 
-const PRESETS = {
-  member: { label: "Member", is_admin: false, is_super_admin: false, permissions: ["view_published"] },
-  analyst: { label: "Analyst", is_admin: false, is_super_admin: false, permissions: ["view_published", "draft_research", "edit_own_research"] },
-  instructor: { label: "Instructor", is_admin: false, is_super_admin: false, permissions: ["view_published", "draft_reports", "edit_own_reports"] },
-  admin: { label: "Admin", is_admin: true, is_super_admin: false, permissions: ["view_published", "manage_portfolios", "manage_recommendations", "manage_reports", "publish_content", "support_inbox"] },
-  super_admin: { label: "Super Admin", is_admin: true, is_super_admin: true, permissions: ["all"] },
-};
-
 const PERMISSIONS = [
-  ["view_published", "View published content"],
-  ["draft_research", "Draft research"],
-  ["edit_own_research", "Edit own research"],
-  ["draft_reports", "Draft reports"],
-  ["edit_own_reports", "Edit own reports"],
-  ["manage_portfolios", "Manage portfolios"],
-  ["manage_recommendations", "Manage recommendations"],
-  ["manage_reports", "Manage reports"],
-  ["publish_content", "Publish content"],
-  ["support_inbox", "Support inbox"],
+  ["view_published", "View published platform"],
+  ["publish_articles", "Publish market news & economic updates"],
+  ["publish_updates", "Publish company and portfolio updates"],
+  ["edit_own_content", "Edit own published content"],
+  ["manage_portfolios", "Create and manage portfolios"],
+  ["manage_recommendations", "Create and manage recommendations"],
+  ["manage_reports", "Create and manage research reports"],
+  ["publish_content", "Publish all platform content"],
+  ["support_inbox", "Open the support inbox"],
+  ["manage_settings", "Manage platform settings"],
 ];
-
-function rowRole(row) {
-  if (row?.is_super_admin) return "super_admin";
-  if (row?.is_admin) return "admin";
-  if (["analyst", "instructor", "member"].includes(row?.role)) return row.role;
-  return "member";
-}
 
 export default function AdminTeam() {
   const { profile } = useAuth();
@@ -43,106 +29,140 @@ export default function AdminTeam() {
   const [query, setQuery] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
+  const [inviteRole, setInviteRole] = useState("analyst");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const isSuperAdmin = Boolean(profile?.is_super_admin);
 
-  const load = async () => {
+  const load = async (preferredId) => {
     const { data, error } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
     if (error) return setMessage(error.message);
-    setRows(data || []);
-    setSelectedId((current) => current && data?.some((row) => row.id === current) ? current : data?.[0]?.id || "");
+    const nextRows = data || [];
+    setRows(nextRows);
+    setSelectedId((current) => preferredId || (current && nextRows.some((row) => row.id === current) ? current : nextRows[0]?.id || ""));
   };
 
   useEffect(() => { load(); }, []);
   const selected = rows.find((row) => row.id === selectedId) || null;
-  const supportsAdvancedRole = Boolean(selected && Object.prototype.hasOwnProperty.call(selected, "role"));
-  const supportsPermissions = Boolean(selected && Object.prototype.hasOwnProperty.call(selected, "permissions"));
-  const role = rowRole(selected);
-  const permissionSet = useMemo(() => {
-    if (role === "super_admin") return new Set(PERMISSIONS.map(([key]) => key));
-    const stored = supportsPermissions && Array.isArray(selected?.permissions) ? selected.permissions : PRESETS[role]?.permissions || [];
-    return new Set(stored);
-  }, [selected, role, supportsPermissions]);
-
-  const visible = rows.filter((row) => !query.trim() || `${row.full_name || ""} ${row.email || ""} ${rowRole(row)}`.toLowerCase().includes(query.toLowerCase()));
+  const supported = supportedProfileFields(selected);
+  const role = deriveRole(selected);
+  const permissions = useMemo(() => permissionSet(selected), [selected]);
+  const visible = rows.filter((row) => !query.trim() || `${row.full_name || ""} ${row.email || ""} ${deriveRole(row)}`.toLowerCase().includes(query.toLowerCase()));
 
   const changeRole = async (nextRole) => {
     if (!isSuperAdmin || !selected) return;
-    if (["analyst", "instructor"].includes(nextRole) && !supportsAdvancedRole) {
-      return setMessage(isArabic ? "قاعدة البيانات الحالية لا تحتوي حقل Role. تم الحفاظ عليها بدون أي تغيير، لذلك يمكن إدارة Member وAdmin وSuper Admin فقط بأمان." : "The current database has no role field. To preserve it unchanged, only Member, Admin and Super Admin can be persisted safely.");
-    }
-    const preset = PRESETS[nextRole];
     setSaving(true);
-    const payload = { is_admin: preset.is_admin, is_super_admin: preset.is_super_admin };
-    if (supportsAdvancedRole) payload.role = nextRole;
-    if (supportsPermissions) payload.permissions = preset.permissions;
+    setMessage("");
+    const payload = rolePayload(selected, nextRole);
     const { error } = await supabase.from("profiles").update(payload).eq("id", selected.id);
     setSaving(false);
     if (error) return setMessage(error.message);
-    setMessage(isArabic ? "تم تحديث الدور والصلاحيات" : "Role and permissions updated.");
-    await load();
+    const compatibility = !supported.role && !supported.title && !supported.position && ["analyst", "instructor", "contributor"].includes(nextRole);
+    setMessage(compatibility
+      ? (isArabic ? "تم تفعيل صلاحية النشر عبر حالة Admin الحالية. قاعدة البيانات لا تحتوي حقلًا نصيًا لحفظ اسم الدور، لذلك سيظهر الحساب كـAdmin بعد إعادة التحميل." : "Publishing access is active through the existing Admin flag. The current profile has no text role/title field, so it will display as Admin after reload.")
+      : (isArabic ? "تم تحديث الدور والصلاحيات بنجاح." : "Role and permissions updated successfully."));
+    await load(selected.id);
   };
 
   const togglePermission = async (key) => {
-    if (!isSuperAdmin || !selected || !supportsPermissions || role === "super_admin") return;
-    const next = new Set(permissionSet);
+    if (!isSuperAdmin || !selected || !supported.permissions || role === "super_admin") return;
+    const next = new Set(permissions);
     if (next.has(key)) next.delete(key); else next.add(key);
     setSaving(true);
     const { error } = await supabase.from("profiles").update({ permissions: [...next] }).eq("id", selected.id);
     setSaving(false);
     if (error) return setMessage(error.message);
-    await load();
+    setMessage(isArabic ? "تم حفظ الصلاحيات." : "Permissions saved.");
+    await load(selected.id);
   };
 
   const sendInvite = async (event) => {
     event.preventDefault();
-    if (!isSuperAdmin || !inviteEmail.trim()) return;
+    const email = inviteEmail.trim().toLowerCase();
+    if (!isSuperAdmin || !email) return;
     setSaving(true);
+    setMessage("");
     const { error } = await supabase.auth.signInWithOtp({
-      email: inviteEmail.trim(),
+      email,
       options: {
         shouldCreateUser: true,
         emailRedirectTo: `${window.location.origin}/login`,
-        data: { full_name: inviteName.trim() || undefined, invited_by: profile.id },
+        data: {
+          full_name: inviteName.trim() || undefined,
+          invited_by: profile.id,
+          requested_role: inviteRole,
+        },
       },
     });
+    if (error) {
+      setSaving(false);
+      return setMessage(error.message);
+    }
+
+    // Existing accounts can receive the selected role immediately. New users
+    // receive it after their profile is created and appears in this directory.
+    const { data: existingProfile } = await supabase.from("profiles").select("*").eq("email", email).maybeSingle();
+    if (existingProfile) {
+      const { error: roleError } = await supabase.from("profiles").update(rolePayload(existingProfile, inviteRole)).eq("id", existingProfile.id);
+      if (roleError) {
+        setSaving(false);
+        return setMessage(roleError.message);
+      }
+      await load(existingProfile.id);
+      setMessage(isArabic ? "تم إرسال الدعوة وتعيين الدور للحساب الموجود." : "Invitation sent and the selected role was assigned to the existing account.");
+    } else {
+      setMessage(isArabic ? "تم إرسال الدعوة. سيتم إنشاء الملف عند أول تسجيل دخول، وبعدها يمكنك تثبيت الدور من هذه الصفحة." : "Invitation sent. The profile will be created on first sign-in, then you can confirm the role from this page.");
+    }
     setSaving(false);
-    if (error) return setMessage(error.message);
-    setMessage(isArabic ? "تم إرسال رابط آمن لإنشاء الحساب. بعد تسجيل الدخول لأول مرة سيظهر المستخدم هنا لتحديد دوره." : "A secure account invitation was sent. After first sign-in, the user will appear here for role assignment.");
-    setInviteEmail(""); setInviteName("");
+    setInviteEmail("");
+    setInviteName("");
   };
 
   const copySignupLink = async () => {
     await navigator.clipboard.writeText(`${window.location.origin}/signup`);
-    setMessage(isArabic ? "تم نسخ رابط التسجيل" : "Signup link copied.");
+    setMessage(isArabic ? "تم نسخ رابط التسجيل." : "Signup link copied.");
   };
 
   return (
-    <div className="dashboard-shell admin-shell-v21 team-admin-shell-v32">
+    <div className="dashboard-shell admin-shell-v21 team-admin-shell-v33">
       <DashboardHeader admin/>
-      <div className="admin-workspace-v21 team-workspace-v32">
-        <aside className="admin-months-v21 team-directory-v32">
-          <div className="admin-profile-v21"><small>TEAM & ACCESS</small><b>{profile?.full_name || profile?.email}</b></div>
-          <label className="team-search-v32"><Search/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isArabic ? "ابحث في الفريق" : "Search team"}/></label>
-          <nav>{visible.map((row) => <button key={row.id} className={row.id === selectedId ? "active" : ""} onClick={() => { setSelectedId(row.id); setMessage(""); }}><span className="team-avatar-mini-v32">{(row.full_name || row.email || "U").slice(0,1).toUpperCase()}</span><span><b>{row.full_name || row.email}</b><small>{row.email}</small></span><em>{PRESETS[rowRole(row)]?.label}</em></button>)}</nav>
-        </aside>
+      <main className="team-page-v33">
+        <section className="team-hero-v33">
+          <div><span className="eyebrow">ROLE-BASED ACCESS CONTROL</span><h1>{isArabic ? "الفريق والصلاحيات بدون تعقيد" : "Team access without permission confusion"}</h1><p>{isArabic ? "اختر العضو، حدد دوره، وستظهر له أدوات النشر والإدارة المناسبة تلقائيًا." : "Select a team member, assign a role and the platform will expose the correct publishing and management tools automatically."}</p></div>
+          <div className="team-hero-stat-v33"><UsersRound/><span><small>{isArabic ? "إجمالي الحسابات" : "TEAM ACCOUNTS"}</small><b>{rows.length}</b></span></div>
+        </section>
 
-        <main className="admin-content-v21 team-admin-main-v32">
-          <header className="admin-top-v21"><div><span className="eyebrow">RBAC CONTROL CENTRE</span><h1>{isArabic ? "الفريق والصلاحيات" : "Team, roles and permissions"}</h1><p>{isArabic ? "إدارة آمنة للأدوار الحالية بدون تغيير قاعدة البيانات أو منطق المصادقة." : "Securely manage existing roles without changing the database or authentication logic."}</p></div><span className={`status-pill ${isSuperAdmin ? "live" : "draft"}`}>{isSuperAdmin ? "SUPER ADMIN" : "READ ONLY"}</span></header>
-          {message && <div className="notice-bar">{message}</div>}
+        {message && <div className="notice-bar">{message}</div>}
 
-          <section className="team-admin-grid-v32">
-            <article className="panel-v21 padded-v21 team-invite-v32"><div className="panel-heading-v21"><div><span className="eyebrow">SECURE INVITATION</span><h2>{isArabic ? "دعوة عضو جديد" : "Invite a new team member"}</h2><p>{isArabic ? "يرسل Supabase رابط تسجيل آمن، ثم تحدد الدور بعد أول تسجيل دخول." : "Supabase sends a secure sign-in link; assign the role after the first login."}</p></div><MailPlus/></div><form onSubmit={sendInvite}><label>{isArabic ? "الاسم" : "Name"}<input value={inviteName} onChange={(event) => setInviteName(event.target.value)} placeholder="Hisham Adel"/></label><label>{isArabic ? "البريد" : "Email"}<input type="email" required value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="analyst@example.com"/></label><div><button className="button gold" disabled={!isSuperAdmin || saving}><MailPlus size={15}/>{isArabic ? "إرسال الدعوة" : "Send invitation"}</button><button type="button" className="button subtle" onClick={copySignupLink}><Copy size={15}/>{isArabic ? "نسخ رابط التسجيل" : "Copy signup link"}</button></div></form></article>
+        <div className="team-layout-v33">
+          <aside className="team-directory-v33">
+            <div className="team-directory-head-v33"><div><small>DIRECTORY</small><b>{isArabic ? "اختر عضوًا" : "Select a member"}</b></div><ShieldCheck/></div>
+            <label className="team-search-v33"><Search/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isArabic ? "بحث بالاسم أو البريد" : "Search name or email"}/></label>
+            <nav>{visible.map((row) => <button key={row.id} className={row.id === selectedId ? "active" : ""} onClick={() => { setSelectedId(row.id); setMessage(""); }}><span className="team-avatar-mini-v33">{(row.full_name || row.email || "U").slice(0, 2).toUpperCase()}</span><span><b>{row.full_name || row.email}</b><small>{row.email}</small></span><em>{ROLE_PRESETS[deriveRole(row)]?.label}</em></button>)}</nav>
+          </aside>
 
-            {selected && <article className="panel-v21 padded-v21 team-member-card-v32"><div className="team-member-heading-v32"><span className="team-member-avatar-v32">{(selected.full_name || selected.email || "U").slice(0,2).toUpperCase()}</span><div><small>SELECTED PROFILE</small><h2>{selected.full_name || selected.email}</h2><p>{selected.email}</p></div><ShieldCheck/></div><div className="team-meta-v32"><span><small>User ID</small><b>{selected.id}</b></span><span><small>{isArabic ? "تاريخ الإنشاء" : "Created"}</small><b>{dateTimeLabel(selected.created_at, locale)}</b></span><span><small>{isArabic ? "الدور الحالي" : "Current role"}</small><b>{PRESETS[role]?.label}</b></span></div><label className="team-role-select-v32">{isArabic ? "تغيير الدور" : "Change role"}<select value={role} disabled={!isSuperAdmin || saving} onChange={(event) => changeRole(event.target.value)}><option value="member">Member</option><option value="analyst">Analyst {!supportsAdvancedRole ? "(requires role field)" : ""}</option><option value="instructor">Instructor {!supportsAdvancedRole ? "(requires role field)" : ""}</option><option value="admin">Admin</option><option value="super_admin">Super Admin</option></select></label></article>}
+          <section className="team-control-v33">
+            <article className="team-invite-v33">
+              <header><div><span className="eyebrow">SECURE INVITATION</span><h2>{isArabic ? "إضافة عضو للفريق" : "Invite a team member"}</h2></div><MailPlus/></header>
+              <form onSubmit={sendInvite}><label>{isArabic ? "الاسم" : "Name"}<input value={inviteName} onChange={(event) => setInviteName(event.target.value)} placeholder="Hisham Adel"/></label><label>{isArabic ? "البريد" : "Email"}<input type="email" required value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="analyst@example.com"/></label><label>{isArabic ? "الدور المطلوب" : "Invite as"}<select value={inviteRole} onChange={(event) => setInviteRole(event.target.value)}><option value="contributor">Contributor</option><option value="analyst">Analyst</option><option value="instructor">Instructor</option><option value="admin">Admin</option></select></label><div><button className="button primary" disabled={!isSuperAdmin || saving}><MailPlus/>{isArabic ? "إرسال الدعوة" : "Send invitation"}</button><button type="button" className="button subtle" onClick={copySignupLink}><Copy/>{isArabic ? "نسخ الرابط" : "Copy link"}</button></div></form>
+            </article>
 
-            <article className="panel-v21 padded-v21 permission-matrix-v32"><div className="panel-heading-v21"><div><span className="eyebrow">GRANULAR PERMISSIONS</span><h2>{isArabic ? "مصفوفة الصلاحيات" : "Permission matrix"}</h2><p>{supportsPermissions ? (isArabic ? "الصلاحيات المتقدمة متاحة ويمكن تعديلها." : "Advanced permission storage is available and editable.") : (isArabic ? "وضع توافق آمن: الصلاحيات مشتقة من الدور الحالي لأن قاعدة البيانات لا تحتوي حقل Permissions." : "Safe compatibility mode: permissions are derived from the existing role because the database has no permissions field.")}</p></div><KeyRound/></div><div className="permission-grid-v32">{PERMISSIONS.map(([key,label]) => <button key={key} type="button" className={permissionSet.has(key) ? "active" : ""} disabled={!isSuperAdmin || !supportsPermissions || role === "super_admin" || saving} onClick={() => togglePermission(key)}><span>{permissionSet.has(key) ? <Check/> : <Shield/>}</span><b>{label}</b><small>{permissionSet.has(key) ? "Allowed" : "Restricted"}</small></button>)}</div></article>
+            {selected && <>
+              <article className="team-member-v33">
+                <div className="team-member-heading-v33"><span>{(selected.full_name || selected.email || "U").slice(0, 2).toUpperCase()}</span><div><small>SELECTED ACCOUNT</small><h2>{selected.full_name || selected.email}</h2><p>{selected.email}</p></div><ShieldCheck/></div>
+                <div className="team-meta-v33"><span><small>{isArabic ? "الدور" : "Current role"}</small><b>{ROLE_PRESETS[role]?.label}</b></span><span><small>{isArabic ? "تاريخ الإنشاء" : "Created"}</small><b>{dateTimeLabel(selected.created_at, locale)}</b></span><span><small>User ID</small><b>{selected.id}</b></span></div>
+                <label className="team-role-select-v33">{isArabic ? "تعيين الدور" : "Assign role"}<select value={role} disabled={!isSuperAdmin || saving} onChange={(event) => changeRole(event.target.value)}><option value="member">Member</option><option value="contributor">Contributor</option><option value="analyst">Analyst</option><option value="instructor">Instructor</option><option value="admin">Admin</option><option value="super_admin">Super Admin</option></select></label>
+                <div className="role-preview-v33"><UserCog/><div><small>ROLE CAPABILITIES</small><b>{ROLE_PRESETS[role]?.title}</b><p>{(ROLE_PRESETS[role]?.permissions || []).join(" · ")}</p></div></div>
+              </article>
 
-            <article className="panel-v21 padded-v21 team-security-note-v32"><UserCog/><div><span className="eyebrow">STABILITY GUARANTEE</span><h2>{isArabic ? "لا يوجد أي تعديل على الـBackend" : "No backend or schema changes"}</h2><p>{isArabic ? "هذه الصفحة تستخدم is_admin وis_super_admin الموجودين بالفعل. إنشاء الحساب يتم بدعوة Supabase القياسية، وأي صلاحيات متقدمة لا تُفعّل إلا لو كانت حقولها موجودة أصلًا." : "This page uses the existing is_admin and is_super_admin fields. Account creation uses Supabase's standard secure invitation flow, and advanced permissions activate only when those fields already exist."}</p></div></article>
+              <article className="permission-matrix-v33">
+                <header><div><span className="eyebrow">GRANULAR PERMISSIONS</span><h2>{isArabic ? "صلاحيات هذا الحساب" : "Account permissions"}</h2><p>{supported.permissions ? (isArabic ? "يمكن تعديل كل صلاحية بشكل مستقل." : "Every permission can be toggled independently.") : (isArabic ? "القاعدة الحالية لا تحتوي حقل Permissions؛ يتم تطبيق مجموعة الصلاحيات الآمنة الخاصة بالدور تلقائيًا." : "The current profile has no permissions field; the safe role preset is applied automatically.")}</p></div><KeyRound/></header>
+                <div className="permission-grid-v33">{PERMISSIONS.map(([key, label]) => <button key={key} type="button" className={permissions.has("all") || permissions.has(key) ? "active" : ""} disabled={!isSuperAdmin || !supported.permissions || role === "super_admin" || saving} onClick={() => togglePermission(key)}><span>{permissions.has("all") || permissions.has(key) ? <Check/> : <Shield/>}</span><div><b>{label}</b><small>{permissions.has("all") || permissions.has(key) ? "Allowed" : "Restricted"}</small></div></button>)}</div>
+              </article>
+            </>}
           </section>
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

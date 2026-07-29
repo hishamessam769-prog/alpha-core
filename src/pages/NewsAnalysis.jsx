@@ -45,7 +45,7 @@ export default function NewsAnalysis() {
   const featured = items[0] || null;
   const events = useMemo(() => data.reports.flatMap((report) => splitEventLines(report.watch_next).map((title) => ({ title, date: report.week_end, report }))).slice(0, 6), [data.reports]);
   const visible = items.filter((item) => {
-    const matchesFilter = filter === "all" || item.kind === filter || (filter === "research" && item.kind === "recommendation");
+    const matchesFilter = filter === "all" || item.kind === filter || (filter === "recommendation" && item.kind === "recommendation");
     const needle = query.trim().toLowerCase();
     return matchesFilter && (!needle || `${item.title} ${item.summary} ${item.category} ${item.ticker || ""} ${item.content || ""}`.toLowerCase().includes(needle));
   });
@@ -79,7 +79,7 @@ export default function NewsAnalysis() {
 
         <Reveal as="section" className="news-toolbar-v32" delay={100}>
           <div><span className="eyebrow">NEWS INDEX</span><h2>{isArabic ? "آخر الأخبار والأبحاث" : "Latest news and analysis"}</h2></div>
-          <div className="news-controls-v32"><label><Search/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isArabic ? "ابحث في الأخبار والشركات" : "Search news, companies or tickers"}/></label><div><Filter/>{[["all", isArabic ? "الكل" : "All"],["report", isArabic ? "تقارير" : "Reports"],["update", isArabic ? "تحديثات" : "Updates"],["research", isArabic ? "أبحاث" : "Research"]].map(([value,label]) => <button key={value} className={filter === value ? "active" : ""} onClick={() => setFilter(value)}>{label}</button>)}</div></div>
+          <div className="news-controls-v32"><label><Search/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={isArabic ? "ابحث في الأخبار والشركات" : "Search news, companies or tickers"}/></label><div><Filter/>{[["all", isArabic ? "الكل" : "All"],["report", isArabic ? "تقارير" : "Reports"],["update", isArabic ? "تحديثات" : "Updates"],["recommendation", isArabic ? "توصيات الأسهم" : "Stock Recommendations"]].map(([value,label]) => <button key={value} className={filter === value ? "active" : ""} onClick={() => setFilter(value)}>{label}</button>)}</div></div>
         </Reveal>
 
         {loading ? <div className="news-grid-v32">{[0,1,2,3,4,5].map((item) => <div key={item} className="news-card-v32 skeleton-card-v32"/>)}</div> : <section className="news-grid-v32">

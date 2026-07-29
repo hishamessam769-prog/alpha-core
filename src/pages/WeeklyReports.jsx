@@ -24,7 +24,7 @@ export default function WeeklyReports() {
         supabase.from("profiles").select("*"),
       ]);
       if (reportResult.error) setMessage(reportResult.error.message);
-      setReports(reportResult.data || []);
+      setReports((reportResult.data || []).filter((item) => !String(item.slug || "").startsWith("market-news-") && !String(item.slug || "").startsWith("economic-update-")));
       setProfiles(Object.fromEntries((profileResult.data || []).map((row) => [row.id, row])));
       setLoading(false);
     };

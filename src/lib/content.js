@@ -13,25 +13,32 @@ export function articleReadTime(...parts) {
 
 export function buildNewsItems({ reports = [], recommendations = [], updates = [] }) {
   const recommendationMap = Object.fromEntries(recommendations.map((item) => [item.id, item]));
-  const reportItems = reports.map((item) => ({
-    id: item.id,
-    kind: "report",
-    category: "Weekly intelligence",
-    title: item.title,
-    summary: item.summary,
-    publishedAt: item.published_at || item.updated_at || item.week_end,
-    authorId: item.created_by,
-    route: `/news/report/${item.id}`,
-    sourceRoute: `/weekly-reports/${item.slug}`,
-    readTime: articleReadTime(item.summary, item.market_overview, item.portfolio_update, item.gold_update, item.watch_next),
-    accent: "gold",
-    content: [item.market_overview, item.portfolio_update, item.gold_update, item.watch_next].filter(Boolean).join(" "),
-  }));
+  const reportItems = reports.map((item) => {
+    const slug = String(item.slug || "");
+    const isMarketNews = slug.startsWith("market-news-");
+    const isEconomicUpdate = slug.startsWith("economic-update-");
+    const isArticle = isMarketNews || isEconomicUpdate;
+    return {
+      id: item.id,
+      kind: "report",
+      contentType: isEconomicUpdate ? "economic" : isMarketNews ? "market" : "weekly",
+      category: isEconomicUpdate ? "Economic update" : isMarketNews ? "Market news & analysis" : "Research report",
+      title: item.title,
+      summary: item.summary,
+      publishedAt: item.published_at || item.updated_at || item.week_end,
+      authorId: item.created_by,
+      route: `/news/report/${item.id}`,
+      sourceRoute: isArticle ? null : `/weekly-reports/${item.slug}`,
+      readTime: articleReadTime(item.summary, item.market_overview, item.portfolio_update, item.gold_update, item.watch_next),
+      accent: isEconomicUpdate ? "violet" : isMarketNews ? "cyan" : "blue",
+      content: [item.market_overview, item.portfolio_update, item.gold_update, item.watch_next].filter(Boolean).join(" "),
+    };
+  });
   const recommendationItems = recommendations.map((item) => ({
     id: item.id,
     kind: "recommendation",
-    category: item.sector || "Equity research",
-    title: item.title || `${item.company_name} investment research`,
+    category: item.sector ? `Stock recommendation · ${item.sector}` : "Stock recommendation",
+    title: item.title || `${item.company_name} stock recommendation`,
     summary: item.thesis || item.why_selected || item.company_story || `Investment recommendation for ${item.company_name}.`,
     publishedAt: item.recommendation_date || item.published_at || item.updated_at,
     authorId: item.created_by,

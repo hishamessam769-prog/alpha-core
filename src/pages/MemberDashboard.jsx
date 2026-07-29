@@ -27,7 +27,7 @@ import {
 } from "../lib/calculations";
 import { recommendationMetrics, recommendationSummary } from "../lib/recommendations";
 
-const allocationColours = ["#37b7ff", "#c5a059", "#35d08f", "#9f7aea", "#f58b5b", "#6f8cff", "#d76ec9", "#75c7b7", "#dcbd78", "#8c98a8"];
+const allocationColours = ["#20d3ff", "#8b5cf6", "#2dd4bf", "#60a5fa", "#f97316", "#6366f1", "#ec4899", "#14b8a6", "#a78bfa", "#94a3b8"];
 
 async function loadPublishedData() {
   const [portfolioResult, monthResult, recommendationResult, reportResult, priceResult] = await Promise.all([
@@ -163,7 +163,7 @@ export default function MemberDashboard() {
     setExporting(true);
     setMessage(isArabic ? "جاري تجهيز التقرير…" : "Preparing your report…");
     try {
-      const canvas = await html2canvas(reportRef.current, { scale: 1.7, backgroundColor: "#0b0f14", useCORS: true, logging: false, windowWidth: 1600 });
+      const canvas = await html2canvas(reportRef.current, { scale: 1.7, backgroundColor: "#07131f", useCORS: true, logging: false, windowWidth: 1600 });
       const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
@@ -171,19 +171,19 @@ export default function MemberDashboard() {
       const imgHeight = (canvas.height * pageWidth) / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
-      pdf.setFillColor(11, 15, 20);
+      pdf.setFillColor(7, 19, 31);
       pdf.rect(0, 0, pageWidth, pageHeight, "F");
       pdf.addImage(imgData, "JPEG", 0, position, pageWidth, imgHeight);
       heightLeft -= pageHeight;
       while (heightLeft > 2) {
         position -= pageHeight;
         pdf.addPage();
-        pdf.setFillColor(11, 15, 20);
+        pdf.setFillColor(7, 19, 31);
         pdf.rect(0, 0, pageWidth, pageHeight, "F");
         pdf.addImage(imgData, "JPEG", 0, position, pageWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-      pdf.save(`ALPHA-PLATFORM-${currentPortfolio?.slug || "PORTFOLIO"}-${selected?.month_key || "REPORT"}-V3.2.pdf`);
+      pdf.save(`ALPHA-PLATFORM-${currentPortfolio?.slug || "PORTFOLIO"}-${selected?.month_key || "REPORT"}-V3.3.pdf`);
       window.dispatchEvent(new CustomEvent("alpha:meaningful-action", { detail: { action: "export_portfolio_pdf" } }));
       setMessage("");
     } catch (error) {

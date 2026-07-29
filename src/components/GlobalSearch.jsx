@@ -7,8 +7,8 @@ import { supabase } from "../lib/supabase";
 const baseItems = [
   { type: "page", title: "Portfolio Terminal", subtitle: "Live performance, holdings and Alpha", path: "/dashboard", icon: BriefcaseBusiness },
   { type: "page", title: "Portfolio Library", subtitle: "All published portfolio strategies", path: "/portfolios", icon: BriefcaseBusiness },
-  { type: "page", title: "Recommendations", subtitle: "Independent investment recommendations", path: "/recommendations", icon: TrendingUp },
-  { type: "page", title: "Research & Insights", subtitle: "Research library and methodology", path: "/methodology", icon: Sparkles },
+  { type: "page", title: "Stock Recommendations", subtitle: "Independent investment calls, targets and track record", path: "/recommendations", icon: TrendingUp },
+  { type: "page", title: "Research Methodology", subtitle: "How ALPHA measures performance and risk", path: "/methodology", icon: Sparkles },
   { type: "page", title: "News & Analysis", subtitle: "Market news, company updates and events", path: "/news", icon: Newspaper },
   { type: "page", title: "Weekly Reports", subtitle: "Market recap and portfolio updates", path: "/weekly-reports", icon: FileText },
   { type: "page", title: "Profile", subtitle: "Account and preferences", path: "/profile", icon: UserRound },

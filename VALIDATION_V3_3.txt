@@ -1,0 +1,47 @@
+ALPHA PLATFORM V3.3 — VALIDATION REPORT
+
+SOURCE VALIDATION
+- 56 JavaScript / JSX source files parsed with TypeScript transpileModule.
+- Syntax errors: 0.
+- Undefined-identifier diagnostics (TS2304/TS2552/TS2448/TS2454): 0.
+- Local import graph checked: 229 imports, 0 missing files.
+- CSS parsed successfully with PostCSS.
+- Responsive breakpoints reviewed at 1380px, 1120px, 780px and 520px.
+
+ROUTE COMPATIBILITY
+- V3.2 routes: 27.
+- V3.3 routes: 28.
+- Removed routes: 0.
+- Added route: /admin/publishing.
+
+PROTECTED FILE COMPARISON
+The following files are byte-for-byte identical to V3.2:
+- src/lib/calculations.js
+- src/lib/recommendations.js
+- src/lib/reporting.js
+- src/lib/supabase.js
+- src/lib/zip.js
+- src/context/AuthContext.jsx
+- src/context/LanguageContext.jsx
+- src/context/SettingsContext.jsx
+- src/context/ThemeContext.jsx
+- supabase/upgrade-v3.1.sql
+
+DATABASE SAFETY
+- No new SQL file.
+- No DROP TABLE.
+- No DROP COLUMN.
+- No database schema change.
+- No API or Supabase configuration change.
+
+FUNCTIONAL STATIC CHECKS
+- News article loader and standalone article rendering validated.
+- Market News and Economic Update slug classification validated.
+- Weekly Reports public/admin filtering keeps standalone news separate.
+- Creator draft/publish/update workflow uses the existing weekly_reports table.
+- Super Admin article deletion uses the existing delete_weekly_report RPC.
+- Frontend access requires the existing is_admin/is_super_admin flags.
+- Recommendation labels point to Stock Recommendations, not Research.
+
+BUILD ENVIRONMENT NOTE
+A full npm/Vite build could not be executed in the isolated environment because the isolated npm registry returned 404 for @supabase/supabase-js and node_modules were unavailable. Static syntax, import, CSS, route, protected-file and archive integrity tests were completed instead.

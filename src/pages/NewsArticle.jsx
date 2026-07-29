@@ -108,24 +108,33 @@ export default function NewsArticle() {
 function createArticle(kind, record, parent, prices, isArabic) {
   if (!record) return null;
   if (kind === "report") {
-    const sections = [
-      { eyebrow: "MARKET RECAP", title: isArabic ? "نظرة السوق" : "Market overview", body: record.market_overview },
-      { eyebrow: "PORTFOLIO", title: isArabic ? "تحديث المحافظ" : "Portfolio update", body: record.portfolio_update },
-      { eyebrow: "CROSS ASSET", title: isArabic ? "تحديث الذهب" : "Gold update", body: record.gold_update },
-      { eyebrow: "FORWARD VIEW", title: isArabic ? "ما نراقبه بعد ذلك" : "What to watch next", body: record.watch_next },
-    ];
+    const slug = String(record.slug || "");
+    const isMarketNews = slug.startsWith("market-news-");
+    const isEconomicUpdate = slug.startsWith("economic-update-");
+    const isStandaloneArticle = isMarketNews || isEconomicUpdate;
+    const sections = isStandaloneArticle
+      ? [
+          { eyebrow: isEconomicUpdate ? "ECONOMIC UPDATE" : "MARKET INTELLIGENCE", title: isArabic ? "التحليل الكامل" : "Full analysis", body: record.market_overview },
+          { eyebrow: "FORWARD VIEW", title: isArabic ? "ما نراقبه بعد ذلك" : "What to watch next", body: record.watch_next },
+        ]
+      : [
+          { eyebrow: "MARKET RECAP", title: isArabic ? "نظرة السوق" : "Market overview", body: record.market_overview },
+          { eyebrow: "PORTFOLIO", title: isArabic ? "تحديث المحافظ" : "Portfolio update", body: record.portfolio_update },
+          { eyebrow: "CROSS ASSET", title: isArabic ? "تحديث الذهب" : "Gold update", body: record.gold_update },
+          { eyebrow: "FORWARD VIEW", title: isArabic ? "ما نراقبه بعد ذلك" : "What to watch next", body: record.watch_next },
+        ];
     const readTime = articleReadTime(record.summary, ...sections.map((section) => section.body));
     return {
-      category: "WEEKLY MARKET INTELLIGENCE",
+      category: isEconomicUpdate ? "ECONOMIC UPDATE" : isMarketNews ? "MARKET NEWS & ANALYSIS" : "RESEARCH REPORT",
       title: record.title,
       summary: record.summary,
       publishedAt: record.published_at || record.updated_at || record.week_end,
       readTime,
-      accent: "gold",
-      sourceRoute: `/weekly-reports/${record.slug}`,
+      accent: isEconomicUpdate ? "violet" : isMarketNews ? "cyan" : "blue",
+      sourceRoute: isStandaloneArticle ? null : `/weekly-reports/${record.slug}`,
       sections,
       keyTakeaway: record.watch_next || record.summary,
-      aiSummary: `${record.title}. ${record.summary} Market overview: ${record.market_overview || "Not supplied"}. Portfolio update: ${record.portfolio_update || "Not supplied"}. What to watch: ${record.watch_next || "Not supplied"}.`,
+      aiSummary: `${record.title}. ${record.summary} Analysis: ${record.market_overview || "Not supplied"}. What to watch: ${record.watch_next || "Not supplied"}.`,
     };
   }
   if (kind === "recommendation") {
@@ -139,8 +148,8 @@ function createArticle(kind, record, parent, prices, isArabic) {
       { eyebrow: "VALUATION", title: isArabic ? "التقييم والسعر المستهدف" : "Valuation and target price", body: record.valuation },
     ];
     return {
-      category: record.sector || "EQUITY RESEARCH",
-      title: record.title || `${record.company_name} investment recommendation`,
+      category: record.sector ? `STOCK RECOMMENDATION · ${record.sector}` : "STOCK RECOMMENDATION",
+      title: record.title || `${record.company_name} stock recommendation`,
       summary: record.thesis || record.why_selected || record.company_story || `Investment research for ${record.company_name}.`,
       publishedAt: record.recommendation_date || record.published_at || record.updated_at,
       readTime: articleReadTime(...sections.map((section) => section.body)),

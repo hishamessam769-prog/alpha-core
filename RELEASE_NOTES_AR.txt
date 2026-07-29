@@ -1,18 +1,23 @@
-ALPHA PLATFORM V3.2 — MARKET INTELLIGENCE EXPERIENCE
+ALPHA PLATFORM V3.3 — FRONTEND RE-ENGINEERING
 
-UI/UX ONLY + COMPATIBILITY-SAFE MODULES
+FRONTEND / UI / UX / RBAC EXPERIENCE UPDATE ONLY
 
-- New animated financial design layer and scroll reveals.
-- New Portfolio Library with premium performance cards.
-- New Market News & Economic Events dashboard widget.
-- New News & Analysis index using existing published content.
-- New rich article experience with image and video URL embedding.
-- New public analyst/author profiles and complete publication history.
-- Automatic author attribution across portfolios, recommendations, reports and news surfaces.
-- New Super Admin Team & Access interface using current profile flags.
-- Existing Month/Date selector preserved inside portfolio pages.
-- Stronger table stability, contrast and mobile overflow handling.
-- No new database migration and no backend/business-logic changes.
+- Completely new navy, cyan and violet high-tech visual system.
+- New responsive navigation architecture for Members, Creators and Admins.
+- Clear separation between Stock Recommendations, News & Analysis and Research Reports.
+- Floating market tickers, animated volatility graphic and scroll-reveal interactions.
+- Re-engineered responsive grids, cards, forms, charts and sticky-header tables.
+- New permission-aware Creator Publishing Studio.
+- Market News and Economic Update creation, drafts, publishing, editing and content library.
+- Publishing shortcuts for Portfolio Changes, Stock Recommendations and Weekly Reports.
+- Super Admin Team & Access experience with Member, Contributor, Analyst, Instructor, Admin and Super Admin presets.
+- Role-aware invitations: choose the intended role while inviting; existing accounts are assigned immediately.
+- Professional access role controlled from Team & Access rather than self-editable profile fields.
+- Existing author attribution and public analyst profiles preserved and integrated.
+- No database migration, no route removal and no core-calculation changes.
 
-COMPATIBILITY NOTE
-Analyst/Instructor roles and granular permission persistence are available only when compatible fields already exist. V3.2 does not add or alter schema fields.
+NEW ROUTE
+/admin/publishing
+
+DATABASE
+No new SQL is required. Do not rerun upgrade-v3.1.sql if it is already installed.
