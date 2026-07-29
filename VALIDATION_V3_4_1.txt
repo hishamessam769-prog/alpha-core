@@ -1,0 +1,15 @@
+ALPHA PLATFORM V3.4.1 VALIDATION
+
+- 59 JavaScript/JSX source files parsed successfully with the TypeScript JSX parser.
+- All local source imports resolved successfully.
+- Modified JSX transpiled successfully with zero diagnostics.
+- CSS parsed successfully with PostCSS.
+- All 28 V3.4 routes remain unchanged.
+- Supabase SQL, App routing, AuthContext, calculation logic, recommendation logic,
+  reporting logic and Supabase client configuration remain byte-for-byte identical.
+- Only MemberDashboard.jsx, styles.css and the additive PortfolioVisualSuite.jsx
+  component differ from V3.4 source.
+- No SQL changes and no database migration.
+
+A full npm build could not be run because the isolated npm registry does not provide
+this project's dependencies. Static source, import, CSS and protected-file checks passed.

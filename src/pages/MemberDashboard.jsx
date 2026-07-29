@@ -12,6 +12,7 @@ import InsightDrawer from "../components/InsightDrawer";
 import KpiCard from "../components/KpiCard";
 import MarketNewsWidget from "../components/MarketNewsWidget";
 import PerformanceChart from "../components/PerformanceChart";
+import PortfolioVisualSuite from "../components/PortfolioVisualSuite";
 import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
 import {
@@ -241,6 +242,15 @@ export default function MemberDashboard() {
             <KpiCard title={isArabic ? "نسبة النجاح" : "Success rate"} value={formatPercent(recommendationStats.successRate)} note={isArabic ? "من التوصيات المغلقة" : "Across closed calls"} tone={recommendationStats.successRate >= 50 ? "green" : "red"} icon={<CheckCircle2/>}/>
             <KpiCard title={isArabic ? "المراكز الحالية" : "Current holdings"} value={String(metrics.rows.length)} note={`${formatNumber(metrics.rows.reduce((sum, row) => sum + Number(row.weight || 0), 0), 0, locale)}% ${isArabic ? "مستثمر" : "allocated"}`} tone="neutral" icon={<Layers3/>}/>
           </section>
+
+          <PortfolioVisualSuite
+            holdings={metrics.rows}
+            portfolioReturn={selectedReturns.portfolio}
+            benchmarkReturn={selectedReturns.benchmark}
+            benchmarkTicker={selected.benchmark_ticker || currentPortfolio?.benchmark_ticker || "EGX30CAP"}
+            locale={locale}
+            isArabic={isArabic}
+          />
 
           <section className="dashboard-primary-grid dashboard-primary-v3">
             <article className="panel-v21 chart-panel-v21 chart-panel-v3">

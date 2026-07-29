@@ -1,0 +1,15 @@
+ALPHA PLATFORM V3.4.1 — PORTFOLIO VISUAL RESTORE
+
+Scope of this patch only:
+1. Restored a dynamic central circular comparison visual for:
+   - Portfolio monthly return
+   - Benchmark monthly return
+   - Monthly Alpha in the centre
+2. Restored up to six dynamic individual asset-weight donut charts.
+3. Connected every visual to the selected portfolio and selected month.
+4. Added responsive desktop, tablet and mobile layouts.
+5. Added subtle chart animation and reduced-motion support.
+6. Included the restored visuals in the existing portfolio PDF capture area.
+
+No database migration is required.
+No route, authentication, permission, export, calculation or backend file was changed.
