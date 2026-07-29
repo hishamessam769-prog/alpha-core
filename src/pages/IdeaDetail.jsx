@@ -9,6 +9,7 @@ import KpiCard from "../components/KpiCard";
 import { useLanguage } from "../context/LanguageContext";
 import { dateTimeLabel, formatNumber, formatPercent } from "../lib/calculations";
 import { recommendationActionLabel, recommendationMetrics, recommendationStatusLabel, splitResearchPoints } from "../lib/recommendations";
+import { splitRecommendationUpdates } from "../lib/recommendationMedia";
 import { supabase } from "../lib/supabase";
 
 export default function IdeaDetail() {
@@ -18,6 +19,7 @@ export default function IdeaDetail() {
   const BackIcon = isArabic ? ArrowRight : ArrowLeft;
   const [item, setItem] = useState(null);
   const [updates, setUpdates] = useState([]);
+  const [stockImageUrl, setStockImageUrl] = useState("");
   const [related, setRelated] = useState([]);
   const [prices, setPrices] = useState({});
   const [author, setAuthor] = useState(null);
@@ -37,7 +39,9 @@ export default function IdeaDetail() {
       const error = recommendationResult.error || updatesResult.error || pricesResult.error || relatedResult.error;
       if (error) setMessage(error.message || "");
       setItem(recommendationResult.data || null);
-      setUpdates(updatesResult.data || []);
+      const parsedUpdates = splitRecommendationUpdates(updatesResult.data || []);
+      setUpdates(parsedUpdates.visibleUpdates);
+      setStockImageUrl(parsedUpdates.imageUrl);
       setRelated(relatedResult.data || []);
       setPrices(Object.fromEntries((pricesResult.data || []).map((row) => [String(row.ticker).toUpperCase(), row])));
       setAuthor((profilesResult.data || []).find((row) => row.id === recommendationResult.data?.created_by) || null);
@@ -78,6 +82,8 @@ export default function IdeaDetail() {
           </div>
           <div className="recommendation-hero-actions-v3"><InsightDrawer label={isArabic ? "اشرح التوصية" : "Explain this recommendation"} title={`${item.ticker} · ${isArabic ? "ملخص القرار" : "Decision brief"}`} summary={aiSummary}/><span className="last-update-chip-v3"><i/><small>{isArabic ? "آخر تحديث" : "LAST UPDATE"}</small><b>{dateTimeLabel(item.updated_at, locale)}</b></span></div>
         </section>
+
+        {stockImageUrl && <figure className="recommendation-stock-visual-v34"><img src={stockImageUrl} alt={`${item.company_name} ${item.ticker}`}/><figcaption><span>{isArabic ? "صورة التوصية / لقطة الشارت" : "Recommendation visual / chart snapshot"}</span><b>{item.ticker}</b></figcaption></figure>}
 
         <section className="decision-terminal-v3">
           <article className={`decision-call-v3 ${action}`}><div>{action === "invest" ? <TrendingUp/> : <PauseCircle/>}<span><small>{isArabic ? "قرار المحلل" : "ANALYST ACTION"}</small><b>{recommendationActionLabel(action, isArabic)}</b></span></div><p>{action === "invest" ? (isArabic ? "التوصية مفتوحة والسعر الحالي ما زال ضمن نطاق الفرضية المنشورة." : "The recommendation is open and the current price remains within the published investment case.") : (isArabic ? "السجل ما زال مفتوحًا لكن لا ننصح بدخول جديد عند المستوى الحالي." : "The record remains open, but a new entry is not currently recommended.")}</p></article>

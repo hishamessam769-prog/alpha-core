@@ -2,10 +2,11 @@ import { ArrowUpRight, CalendarClock, Clock3, Newspaper, Sparkles, TrendingUp } 
 import { Link } from "react-router-dom";
 import { splitEventLines } from "../lib/content";
 import { dateTimeLabel } from "../lib/calculations";
+import { RECOMMENDATION_IMAGE_TITLE } from "../lib/recommendationMedia";
 
 export default function MarketNewsWidget({ reports = [], recommendations = [], updates = [], isArabic = false, locale = "en-GB" }) {
   const latestReport = reports[0];
-  const latestUpdate = updates[0];
+  const latestUpdate = updates.find((item) => item.title !== RECOMMENDATION_IMAGE_TITLE);
   const parentRecommendation = recommendations.find((item) => item.id === latestUpdate?.recommendation_id);
   const events = splitEventLines(latestReport?.watch_next).slice(0, 3);
   const latestRecommendation = recommendations[0];

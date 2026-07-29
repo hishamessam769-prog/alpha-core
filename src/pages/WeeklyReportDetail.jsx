@@ -53,7 +53,7 @@ export default function WeeklyReportDetail() {
       const image = canvas.toDataURL("image/jpeg", 0.94);
       pdf.setFillColor(7, 19, 31); pdf.rect(0, 0, width, pageHeight, "F"); pdf.addImage(image, "JPEG", 0, position, width, height); left -= pageHeight;
       while (left > 2) { position -= pageHeight; pdf.addPage(); pdf.setFillColor(7, 19, 31); pdf.rect(0, 0, width, pageHeight, "F"); pdf.addImage(image, "JPEG", 0, position, width, height); left -= pageHeight; }
-      pdf.save(`ALPHA-WEEKLY-${report.slug}-V3.3.pdf`);
+      pdf.save(`ALPHA-WEEKLY-${report.slug}-V3.4.pdf`);
       window.dispatchEvent(new CustomEvent("alpha:meaningful-action", { detail: { action: "export_weekly_pdf" } }));
     } catch (error) { setMessage(error.message); } finally { setExporting(false); }
   };

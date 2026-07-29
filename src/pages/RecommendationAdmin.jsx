@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Archive, Eye, Plus, Save, Send, Target, Trash2, TrendingUp } from "lucide-react";
+import { Archive, Eye, ImagePlus, Plus, Save, Send, Target, Trash2, TrendingUp, UploadCloud, X } from "lucide-react";
 import DashboardHeader from "../components/DashboardHeader";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { dateTimeLabel, formatNumber, formatPercent } from "../lib/calculations";
 import { recommendationActionLabel, recommendationMetrics, recommendationStatusLabel } from "../lib/recommendations";
+import { persistRecommendationImage, splitRecommendationUpdates, uploadRecommendationImage, validateRecommendationImage } from "../lib/recommendationMedia";
 import { supabase } from "../lib/supabase";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -47,6 +48,10 @@ export default function RecommendationAdmin() {
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [profiles, setProfiles] = useState([]);
+  const [stockImageUrl, setStockImageUrl] = useState("");
+  const [stockImageFile, setStockImageFile] = useState(null);
+  const [stockImagePreview, setStockImagePreview] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
 
   const load = async (preferredId) => {
     const [{ data: recs, error: recError }, { data: priceRows, error: priceError }, { data: profileRows, error: profileError }] = await Promise.all([
@@ -72,10 +77,14 @@ export default function RecommendationAdmin() {
   };
 
   const loadUpdates = async (recommendationId) => {
-    if (!recommendationId) return setUpdates([]);
+    if (!recommendationId) { setUpdates([]); setStockImageUrl(""); return; }
     const { data, error } = await supabase.from("recommendation_updates").select("*").eq("recommendation_id", recommendationId).order("update_date", { ascending: false });
     if (error) setMessage(error.message);
-    setUpdates(data || []);
+    const parsed = splitRecommendationUpdates(data || []);
+    setUpdates(parsed.visibleUpdates);
+    setStockImageUrl(parsed.imageUrl);
+    setStockImageFile(null);
+    setStockImagePreview("");
   };
 
   useEffect(() => { load(); }, []);
@@ -96,6 +105,9 @@ export default function RecommendationAdmin() {
     setSelectedId("");
     setForm(blankRecommendation());
     setUpdates([]);
+    setStockImageUrl("");
+    setStockImageFile(null);
+    setStockImagePreview("");
     setMessage(isArabic ? "تم فتح توصية جديدة غير محفوظة" : "New unsaved recommendation opened.");
   };
 
@@ -140,12 +152,45 @@ export default function RecommendationAdmin() {
         if (error) throw error;
         id = data.id;
       }
+      if (stockImageFile) {
+        setImageUploading(true);
+        const uploadedUrl = await uploadRecommendationImage({ recommendationId: id, file: stockImageFile, profileId: profile.id });
+        setStockImageUrl(uploadedUrl);
+        setStockImageFile(null);
+        setStockImagePreview("");
+        setImageUploading(false);
+      }
       setMessage(publish ? (isArabic ? "تم نشر التوصية المستقلة للأعضاء" : "Independent recommendation published to members.") : (isArabic ? "تم حفظ المسودة" : "Draft saved."));
       await load(id);
     } catch (error) {
       setMessage(error.message);
+      setImageUploading(false);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const chooseStockImage = (file) => {
+    const validationError = validateRecommendationImage(file);
+    if (validationError) return setMessage(isArabic ? "استخدم صورة PNG أو JPG أو WebP بحجم لا يتجاوز 3MB" : validationError);
+    setStockImageFile(file);
+    setStockImagePreview(URL.createObjectURL(file));
+    setMessage(isArabic ? "الصورة جاهزة وسيتم رفعها عند حفظ التوصية" : "Image ready. It will upload when the recommendation is saved.");
+  };
+
+  const removeStockImage = async () => {
+    setStockImageFile(null);
+    setStockImagePreview("");
+    if (!form.id || !stockImageUrl) { setStockImageUrl(""); return; }
+    setImageUploading(true);
+    try {
+      await persistRecommendationImage({ recommendationId: form.id, imageUrl: "", profileId: profile.id });
+      setStockImageUrl("");
+      setMessage(isArabic ? "تم إزالة الصورة من التوصية" : "Recommendation image removed.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setImageUploading(false);
     }
   };
 
@@ -237,9 +282,9 @@ export default function RecommendationAdmin() {
             <div><span className="eyebrow">INDEPENDENT IDEA</span><h1>{form.ticker || (isArabic ? "توصية جديدة" : "New recommendation")}</h1><p>{isArabic ? "قرار حالي واضح مع مستهدف واحد خلال 12 شهر وأداء مقابل EGX30 Capped وسجل تحديثات." : "A clear current action, one 12-month target, EGX30 Capped performance and a permanent update log."}</p></div>
             <div className="admin-actions-v21">
               {isSuperAdmin && form.id && <button className="button danger" onClick={deleteRecommendation} title={isArabic ? "حذف التوصية بالكامل" : "Delete full recommendation"}><Trash2 size={15}/></button>}
-              <button className="button subtle" disabled={saving} onClick={() => save({ publish: false, status: form.status === "draft" ? "draft" : form.status })}><Save size={16}/>{isArabic ? "حفظ مسودة" : "Save draft"}</button>
-              <button className="button gold" disabled={saving} onClick={() => save({ publish: true, status: form.status === "draft" ? "open" : form.status })}><Send size={16}/>{isArabic ? "نشر التوصية" : "Publish"}</button>
-              {form.id && form.status === "open" && <button className="button green" disabled={saving} onClick={() => closeAtLatest("closed")}><Archive size={16}/>{isArabic ? "إغلاق بالسعر الحالي" : "Close at latest"}</button>}
+              <button className="button subtle" disabled={saving || imageUploading} onClick={() => save({ publish: false, status: form.status === "draft" ? "draft" : form.status })}><Save size={16}/>{isArabic ? "حفظ مسودة" : "Save draft"}</button>
+              <button className="button gold" disabled={saving || imageUploading} onClick={() => save({ publish: true, status: form.status === "draft" ? "open" : form.status })}><Send size={16}/>{isArabic ? "نشر التوصية" : "Publish"}</button>
+              {form.id && form.status === "open" && <button className="button green" disabled={saving || imageUploading} onClick={() => closeAtLatest("closed")}><Archive size={16}/>{isArabic ? "إغلاق بالسعر الحالي" : "Close at latest"}</button>}
             </div>
           </header>
 
@@ -271,6 +316,13 @@ export default function RecommendationAdmin() {
                 <label>{isArabic ? "القرار الحالي للمستثمر" : "Current investor action"}<select value={form.action_status || "invest"} disabled={!(["draft","open"].includes(form.status))} onChange={(e) => setForm({ ...form, action_status: e.target.value })}><option value="invest">{recommendationActionLabel("invest", isArabic)}</option><option value="hold">{recommendationActionLabel("hold", isArabic)}</option></select></label>
                 <label>{isArabic ? "آخر تحديث سعر" : "Last price update"}<input value={currentStockPrice?.price_date || "—"} disabled/></label><label className="check-label-v22"><input type="checkbox" checked={Boolean(form.is_demo)} onChange={(e) => setForm({ ...form, is_demo: e.target.checked })}/>{isArabic ? "تمييز كتوصية تجريبية" : "Mark as demo data"}</label>
               </div>
+              <section className="recommendation-image-editor-v34">
+                <div className="recommendation-image-copy-v34"><span className="eyebrow">STOCK VISUAL</span><h3><ImagePlus size={18}/>{isArabic ? "صورة السهم أو لقطة الشارت" : "Stock image or chart screenshot"}</h3><p>{isArabic ? "ارفع صورة مخصصة للتوصية. سيتم عرضها داخل صفحة التوصية بدون إضافة أي عمود جديد لقاعدة البيانات." : "Upload a dedicated visual for this recommendation. It is stored through the existing platform assets and update workflow without a database migration."}</p></div>
+                <div className="recommendation-image-control-v34">
+                  {(stockImagePreview || stockImageUrl) ? <div className="recommendation-image-preview-v34"><img src={stockImagePreview || stockImageUrl} alt={form.ticker || "Stock recommendation"}/><button type="button" onClick={removeStockImage} disabled={imageUploading} title={isArabic ? "إزالة الصورة" : "Remove image"}><X size={16}/></button></div> : <label className="recommendation-image-drop-v34"><UploadCloud size={28}/><b>{isArabic ? "رفع صورة أو Screenshot" : "Upload image or screenshot"}</b><small>PNG · JPG · WEBP · MAX 3MB</small><input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => chooseStockImage(event.target.files?.[0])}/></label>}
+                  {(stockImagePreview || stockImageUrl) && <label className="button subtle recommendation-image-replace-v34"><UploadCloud size={15}/>{isArabic ? "استبدال الصورة" : "Replace image"}<input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => chooseStockImage(event.target.files?.[0])}/></label>}
+                </div>
+              </section>
             </article>
 
             <article className="panel-v21 padded-v21">

@@ -1,3 +1,5 @@
+import { RECOMMENDATION_IMAGE_TITLE } from "./recommendationMedia";
+
 export function splitEventLines(value = "") {
   return String(value || "")
     .split(/\n|\r|•|\|/)
@@ -49,7 +51,7 @@ export function buildNewsItems({ reports = [], recommendations = [], updates = [
     ticker: item.ticker,
     content: [item.company_name, item.ticker, item.sector, item.company_story, item.why_selected, item.positives, item.risks, item.valuation].filter(Boolean).join(" "),
   }));
-  const updateItems = updates.filter((item) => recommendationMap[item.recommendation_id]).map((item) => {
+  const updateItems = updates.filter((item) => item.title !== RECOMMENDATION_IMAGE_TITLE && recommendationMap[item.recommendation_id]).map((item) => {
     const parent = recommendationMap[item.recommendation_id] || {};
     return {
       id: item.id,

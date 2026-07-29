@@ -1,122 +1,77 @@
-# ALPHA PLATFORM V3.3
+# ALPHA PLATFORM V3.4
 
-إعادة هندسة كاملة للواجهة وتجربة الاستخدام فوق نسخة V3.2 الحالية، مع الحفاظ على قاعدة البيانات والـBackend والحسابات والـAuthentication والـRoutes القديمة.
+تحديث Frontend تدريجي فوق V3.3 يركز على ثبات الـLayout، تبسيط الـHeader، رفع صورة خاصة لتوصيات الأسهم، وتجميع أسعار كل الرموز النشطة في قالب Excel واحد ذكي.
 
 ## مهم قبل الرفع
 
-- **لا يوجد SQL جديد في V3.3.**
+- **لا يوجد SQL جديد في V3.4.**
 - لا تشغّل أي Migration لهذا التحديث.
+- قاعدة Supabase والجداول والـRPC والـRLS والحسابات والـRoutes الحالية لم تتغير.
 - اترك متغيرات Vercel الحالية كما هي:
   - `VITE_SUPABASE_URL`
   - `VITE_SUPABASE_ANON_KEY`
-- ملف `supabase/upgrade-v3.1.sql` موجود داخل المشروع فقط للحفاظ على هيكل النسخة السابقة، ولا يحتاج لإعادة التشغيل إذا كانت قاعدة V3.1 تعمل بالفعل.
+- ملف `supabase/upgrade-v3.1.sql` موجود فقط للحفاظ على المشروع كاملًا. لا تعِد تشغيله إذا كانت V3.1 أو أي نسخة أحدث تعمل بالفعل.
 
 ## طريقة الرفع
 
-1. فك ضغط `alpha-platform-v3.3.zip`.
-2. ارفع محتويات المجلد إلى مستودع GitHub الحالي واستبدل ملفات الواجهة القديمة.
+1. فك ضغط `alpha-platform-v3.4.zip`.
+2. ارفع **محتويات** مجلد `alpha-platform-v3.4` إلى مستودع GitHub الحالي بدل ملفات الواجهة القديمة.
 3. نفّذ Redeploy على Vercel.
-4. امسح Cache المتصفح أو نفّذ Hard Refresh بعد اكتمال النشر.
+4. بعد انتهاء النشر نفّذ Hard Refresh للمتصفح.
 
 ## ما تم تنفيذه
 
-### إعادة تصميم الواجهة
+### 1. إصلاح الـLayout والـResponsive
 
-- نظام ألوان جديد High-Tech يعتمد على Navy وCyan وViolet بدل الشكل الأسود والذهبي القديم.
-- Navigation جديدة واضحة للمستخدم والمحلل والإدارة.
-- بطاقات وأقسام وجداول ونماذج موحدة بصريًا.
-- Micro-interactions وScroll Reveal مبنية بـIntersectionObserver وCSS animations بدون Dependency إضافية قد تؤثر على الاستقرار.
-- Floating market tickers وAnimated market graph وحركات هادئة تراعي `prefers-reduced-motion`.
-- دعم Dark وLight mode في كل الموديولات الجديدة.
+- منع ضغط أو تمدد أبناء الـGrid باستخدام `minmax(0, 1fr)` و`min-width: 0` في المكونات الأساسية.
+- إعادة توزيع KPI Cards والبطاقات الإدارية وبطاقات المحافظ والتوصيات والأخبار حسب عرض الشاشة.
+- توسيط الأرقام والـBadges ومحتوى بطاقات المؤشرات رأسيًا وأفقيًا.
+- تحسين التفاف النص والعناوين داخل البطاقات والفورمات.
+- إصلاح الجداول داخل Scroll Container مستقل ومنع تداخل الـHeader مع الصفوف.
+- Breakpoints مخصصة للـDesktop والـTablet والـMobile والشاشات الصغيرة جدًا.
 
-### Responsive وإصلاح التخطيط
+### 2. Header جديد أقل ازدحامًا
 
-- إصلاح الـoverlap والـbroken grids في Desktop وTablet وMobile.
-- جميع الـCSS grids تستخدم `minmax(0, 1fr)` مع حماية من overflow.
-- الجداول داخل Scroll Containers مستقلة، مع Sticky Headers على مستوى خلايا `th` لمنع تداخل الرأس مع البيانات.
-- تحسين التفاف النصوص، أحجام العناوين، الـcharts، الـforms والـnavigation على الشاشات الصغيرة.
+- إبقاء الروابط الأساسية فقط في الصف الرئيسي.
+- نقل News وResearch Reports وMethodology إلى قائمة Explore.
+- نقل أدوات الإدارة الثانوية إلى قائمة Manage.
+- نقل Profile وPublishing Studio وAdmin Workspace واللغة وتسجيل الخروج إلى قائمة الحساب.
+- إغلاق القوائم عند الضغط خارجها أو الضغط على Escape أو اختيار إجراء.
+- قائمة Mobile مستقلة وواضحة بدل ضغط كل الخيارات داخل صف واحد.
 
-### Navigation ورحلة المستخدم
+### 3. صورة خاصة لتوصية السهم
 
-- فصل واضح بين:
-  - Stock Recommendations
-  - News & Analysis
-  - Research Reports
-  - Portfolios
-- إزالة الالتباس القديم بين Recommendations وResearch.
-- المستخدم يصل لأهم مساحة مناسبة لدوره مباشرة.
-- الـSuper Admin يختار دور العضو أثناء إرسال الدعوة، ويتم تطبيقه فورًا إذا كان الحساب موجودًا بالفعل.
-- المحلل أو المساهم يصل إلى Publishing Studio من الهيدر أو من ملفه الشخصي.
+داخل إدارة التوصيات يمكن الآن:
 
-### RBAC وصلاحيات الفريق
+- رفع PNG أو JPG أو WebP حتى 3MB.
+- معاينة الصورة قبل الحفظ.
+- استبدال الصورة أو إزالتها.
+- عرض الصورة داخل صفحة التوصية وبطاقات مكتبة التوصيات.
 
-- Super Admin يستطيع تعيين:
-  - Member
-  - Contributor
-  - Analyst
-  - Instructor
-  - Admin
-  - Super Admin
-- كل Role له Preset واضح للصلاحيات والـnavigation والأدوات المتاحة.
-- Granular Permission Matrix تستخدم حقل `permissions` تلقائيًا إذا كان موجودًا بالفعل.
-- إذا لم يوجد حقل `role` لكن يوجد `title` أو `position`، يتم استخدامه بصورة توافقية لحفظ Analyst / Instructor / Contributor بدون تغيير Schema.
-- لا يمكن للمستخدم العادي تفعيل صلاحيات إدارية بمجرد تغيير بيانات ملفه؛ وجود `is_admin` الحالي يظل شرطًا أساسيًا.
-- Professional Role أصبح Read-only داخل الملف الشخصي ويتم تعيينه من Team & Access بواسطة Super Admin.
+تم التنفيذ باستخدام Storage Bucket و`recommendation_updates` الموجودين بالفعل، بدون إضافة Table أو Column جديد. سجل الصورة الداخلي لا يظهر ضمن الأخبار أو تحديثات التوصية العادية.
 
-### Creator / Publishing Studio
+### 4. Smart Excel Price Import
 
-Route جديد:
+صفحة `/admin/prices` أصبحت تنشئ قالبًا ديناميكيًا من البيانات الحالية:
 
-- `/admin/publishing`
+- يجمع كل Ticker نشط في الشهور المفتوحة للمحافظ.
+- يجمع Tickers التوصيات المستقلة المفتوحة والمسودات.
+- يضيف مؤشرات المقارنة المستخدمة.
+- يزيل التكرار، حتى لو ظهر السهم في أكثر من محفظة أو توصية.
+- يعرض كل Ticker في صف واحد مع السعر الحالي والتاريخ والأماكن المستخدمة فيه.
+- عند رفع الملف يتم دمج الصفوف المكررة قبل الحفظ، ويُستخدم آخر صف صالح لكل Ticker.
+- يتم تشغيل `apply_latest_market_prices` الموجود بالفعل لتطبيق السعر على كل السجلات المفتوحة المرتبطة، بينما تظل النتائج المغلقة ثابتة.
 
-يحتوي على:
+### 5. Finance Micro-interactions
 
-- إنشاء Market News.
-- إنشاء Economic Updates.
-- حفظ Draft أو Publish مباشرة.
-- دعم النص المنسق والصور وروابط YouTube وVimeo والفيديو المباشر.
-- Author Attribution تلقائي باستخدام `created_by` الحالي.
-- Live Preview.
-- Publishing Library لعرض المواد المنشورة والمسودات.
-- تعديل المادة الحالية وإعادة نشرها.
-- فتح المقال المنشور مباشرة.
-- حذف المادة بواسطة Super Admin فقط عبر آلية حذف التقرير الحالية.
-- اختصارات مباشرة إلى Portfolio Changes وStock Recommendations وWeekly Reports حسب الصلاحيات.
+- Hover خفيف لبطاقات المحافظ والأسهم والتوصيات والأخبار.
+- انتقالات محسوبة للحدود والظلال والبطاقات.
+- تأثير تفاعلي هادئ على خطوط الرسوم البيانية.
+- Loading shimmer جديد.
+- احترام `prefers-reduced-motion`.
 
-تم تنفيذ الأخبار الاقتصادية داخل جدول `weekly_reports` الموجود بالفعل باستخدام Slug واضح يبدأ بـ:
+## التوافق
 
-- `market-news-`
-- `economic-update-`
-
-وبذلك لا يوجد جدول جديد ولا Migration جديد. هذه المواد تظهر داخل News & Analysis ويتم فصلها عن أرشيف Weekly Research Reports في الواجهة.
-
-### Homepage وMarket Intelligence
-
-- Latest Market News وEconomic Highlights وPortfolio Benchmarks في Cards مستقلة.
-- Animated Market Pulse graphic.
-- Performance highlights وhover/scroll interactions.
-- واجهة Landing وMember Dashboard أكثر وضوحًا وقابلية للمسح البصري.
-
-## التوافق الأمني
-
-قاعدة البيانات لم يتم تعديلها بناءً على التعليمات. لذلك:
-
-- `is_admin` و`is_super_admin` يظلان مصدر الصلاحية الأساسي على مستوى الـBackend/RLS.
-- Role وPermission persistence المتقدمة تعمل فقط عند وجود حقول متوافقة أصلًا مثل `role`, `permissions`, `title`, أو `position`.
-- الواجهة لا تحاول إنشاء أعمدة أو تجاوز RLS أو استخدام Service Role داخل المتصفح.
-
-## Routes
-
-كل Routes V3.2 وعددها 27 محفوظة كما هي، وتمت إضافة Route واحد فقط:
-
-- `/admin/publishing`
-
-## الملفات الحساسة المحفوظة حرفيًا
-
-- `src/lib/calculations.js`
-- `src/lib/recommendations.js`
-- `src/lib/reporting.js`
-- `src/lib/supabase.js`
-- `src/lib/zip.js`
-- Auth / Language / Settings / Theme contexts
-- `supabase/upgrade-v3.1.sql`
+- كل Routes V3.3 وعددها 28 محفوظة بدون إضافة أو حذف.
+- لا يوجد تعديل في Auth أو Supabase client أو الحسابات أو منطق المحافظ والتوصيات والتقارير والتصدير.
+- لا يوجد ملف SQL جديد.

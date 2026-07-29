@@ -26,6 +26,7 @@ import {
   monthLabel,
 } from "../lib/calculations";
 import { recommendationMetrics, recommendationSummary } from "../lib/recommendations";
+import { RECOMMENDATION_IMAGE_TITLE } from "../lib/recommendationMedia";
 
 const allocationColours = ["#20d3ff", "#8b5cf6", "#2dd4bf", "#60a5fa", "#f97316", "#6366f1", "#ec4899", "#14b8a6", "#a78bfa", "#94a3b8"];
 
@@ -40,7 +41,7 @@ async function loadPublishedData() {
   const error = portfolioResult.error || monthResult.error || recommendationResult.error || reportResult.error || priceResult.error;
   if (error) throw error;
   const optional = await Promise.allSettled([
-    supabase.from("recommendation_updates").select("*").order("update_date", { ascending: false }).limit(12),
+    supabase.from("recommendation_updates").select("*").order("update_date", { ascending: false }).limit(50),
     supabase.from("profiles").select("*"),
   ]);
   return {
@@ -49,7 +50,7 @@ async function loadPublishedData() {
     recommendations: recommendationResult.data || [],
     reports: reportResult.data || [],
     priceRows: priceResult.data || [],
-    updates: optional[0].status === "fulfilled" ? optional[0].value.data || [] : [],
+    updates: optional[0].status === "fulfilled" ? (optional[0].value.data || []).filter((item) => item.title !== RECOMMENDATION_IMAGE_TITLE).slice(0, 12) : [],
     profiles: optional[1].status === "fulfilled" ? optional[1].value.data || [] : [],
   };
 }
@@ -183,7 +184,7 @@ export default function MemberDashboard() {
         pdf.addImage(imgData, "JPEG", 0, position, pageWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-      pdf.save(`ALPHA-PLATFORM-${currentPortfolio?.slug || "PORTFOLIO"}-${selected?.month_key || "REPORT"}-V3.3.pdf`);
+      pdf.save(`ALPHA-PLATFORM-${currentPortfolio?.slug || "PORTFOLIO"}-${selected?.month_key || "REPORT"}-V3.4.pdf`);
       window.dispatchEvent(new CustomEvent("alpha:meaningful-action", { detail: { action: "export_portfolio_pdf" } }));
       setMessage("");
     } catch (error) {

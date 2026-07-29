@@ -10,6 +10,7 @@ import { useLanguage } from "../context/LanguageContext";
 import { articleReadTime } from "../lib/content";
 import { dateTimeLabel, formatNumber, formatPercent } from "../lib/calculations";
 import { recommendationMetrics } from "../lib/recommendations";
+import { RECOMMENDATION_IMAGE_TITLE } from "../lib/recommendationMedia";
 import { supabase } from "../lib/supabase";
 
 async function loadArticle(kind, id) {
@@ -35,7 +36,7 @@ async function loadArticle(kind, id) {
       if (result.error) throw result.error;
       parent = result.data;
     }
-    return { record: parent ? data : null, parent };
+    return { record: parent && data?.title !== RECOMMENDATION_IMAGE_TITLE ? data : null, parent };
   }
   return { record: null, parent: null };
 }

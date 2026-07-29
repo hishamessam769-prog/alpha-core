@@ -9,6 +9,7 @@ import KpiCard from "../components/KpiCard";
 import { useLanguage } from "../context/LanguageContext";
 import { dateTimeLabel, formatNumber, formatPercent } from "../lib/calculations";
 import { recommendationActionLabel, recommendationMetrics, recommendationStatusLabel, recommendationSummary } from "../lib/recommendations";
+import { RECOMMENDATION_IMAGE_TITLE } from "../lib/recommendationMedia";
 import { supabase } from "../lib/supabase";
 
 export default function IdeasHub() {
@@ -17,6 +18,7 @@ export default function IdeasHub() {
   const [recommendations, setRecommendations] = useState([]);
   const [prices, setPrices] = useState({});
   const [profiles, setProfiles] = useState({});
+  const [stockImages, setStockImages] = useState({});
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("latest");
@@ -25,15 +27,17 @@ export default function IdeasHub() {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: recs, error: recError }, { data: priceRows, error: priceError }, profileResult] = await Promise.all([
+    const [{ data: recs, error: recError }, { data: priceRows, error: priceError }, profileResult, imageResult] = await Promise.all([
       supabase.from("recommendations").select("*").eq("is_published", true).order("recommendation_date", { ascending: false }),
       supabase.from("market_prices").select("ticker, company_name, close_price, price_date"),
       supabase.from("profiles").select("*"),
+      supabase.from("recommendation_updates").select("recommendation_id, body").eq("title", RECOMMENDATION_IMAGE_TITLE),
     ]);
     if (recError || priceError) setMessage(recError?.message || priceError?.message || "");
     setRecommendations(recs || []);
     setPrices(Object.fromEntries((priceRows || []).map((row) => [String(row.ticker).toUpperCase(), row])));
     setProfiles(Object.fromEntries((profileResult.data || []).map((row) => [row.id, row])));
+    setStockImages(Object.fromEntries((imageResult.data || []).filter((row) => row.body).map((row) => [row.recommendation_id, row.body])));
     setLoading(false);
   };
 
@@ -84,7 +88,7 @@ export default function IdeasHub() {
         </section>
 
         {featured && featuredMetrics && <section className="featured-recommendation-v3">
-          <div className="featured-visual-v3"><CompanyMark ticker={featured.ticker} name={featured.company_name} image={featured.company_logo_url} size="large"/><span>{featured.sector || (isArabic ? "أسهم مصرية" : "Egyptian equities")}</span><i>FEATURED</i></div>
+          <div className="featured-visual-v3">{stockImages[featured.id] && <img className="featured-stock-image-v34" src={stockImages[featured.id]} alt=""/>}<CompanyMark ticker={featured.ticker} name={featured.company_name} image={featured.company_logo_url} size="large"/><span>{featured.sector || (isArabic ? "أسهم مصرية" : "Egyptian equities")}</span><i>FEATURED</i></div>
           <div className="featured-copy-v3"><div className="featured-status-v3"><span className={`action-pill-v23 ${featured.action_status || "invest"}`}>{recommendationActionLabel(featured.action_status || "invest", isArabic)}</span><span className={`status-pill small ${featuredMetrics.isOpen ? "live" : "final"}`}>{recommendationStatusLabel(featured.status, isArabic)}</span></div><h2>{featured.company_name}</h2><h3>{featured.title}</h3><p>{featured.why_selected || featured.company_story || (isArabic ? "افتح التوصية لقراءة الفرضية الاستثمارية والتقييم والمخاطر." : "Open the recommendation to read the full investment thesis, valuation and risk case.")}</p><div className="featured-metrics-v3"><span><small>{isArabic ? "سعر الدخول" : "Entry"}</small><b>{formatNumber(featured.entry_price, 2, locale)}</b></span><span><small>{isArabic ? "السعر الحالي" : "Current"}</small><b>{formatNumber(featuredMetrics.currentPrice, 2, locale)}</b></span><span><small>{isArabic ? "المستهدف" : "Target"}</small><b>{formatNumber(featured.target_price, 2, locale)}</b></span><span><small>{isArabic ? "المتبقي" : "Upside"}</small><b className={featuredMetrics.upsideToTarget >= 0 ? "positive" : "negative"}>{formatPercent(featuredMetrics.upsideToTarget)}</b></span></div><AuthorAttribution profile={profiles[featured.created_by]} authorId={featured.created_by} compact/><Link className="button gold" to={`/recommendations/${featured.id}`}>{isArabic ? "فتح توصية السهم" : "Open stock recommendation"}<ArrowUpRight size={15}/></Link></div>
         </section>}
 
@@ -100,7 +104,7 @@ export default function IdeasHub() {
               const metrics = recommendationMetrics(item, prices);
               const action = item.action_status || "invest";
               return <Link className={`research-card-v22 idea-card-v23 research-card-v3 ${index % 5 === 0 ? "wide-card" : ""}`} to={`/recommendations/${item.id}`} key={item.id}>
-                <div className="research-card-cover-v3"><CompanyMark ticker={item.ticker} name={item.company_name} image={item.company_logo_url}/><span>{item.sector || "EGX"}</span><em>{String(index + 1).padStart(2, "0")}</em></div>
+                <div className={`research-card-cover-v3 ${stockImages[item.id] ? "has-stock-image-v34" : ""}`}>{stockImages[item.id] && <img className="recommendation-card-image-v34" src={stockImages[item.id]} alt=""/>}<CompanyMark ticker={item.ticker} name={item.company_name} image={item.company_logo_url}/><span>{item.sector || "EGX"}</span><em>{String(index + 1).padStart(2, "0")}</em></div>
                 <div className="research-card-top-v22"><span className={`action-pill-v23 ${action}`}>{recommendationActionLabel(action, isArabic)}</span><span className={`status-pill small ${metrics.isOpen ? "live" : "final"}`}>{recommendationStatusLabel(item.status, isArabic)}</span></div>
                 <div className="research-company-v22"><div><h3>{item.company_name}</h3><p>{item.title}</p></div></div>
                 <div className="potential-hero-v23"><span><small>{isArabic ? "المتبقي للمستهدف" : "Remaining upside"}</small><b className={metrics.upsideToTarget >= 0 ? "positive" : "negative"}>{formatPercent(metrics.upsideToTarget)}</b></span><Target size={24}/></div>
