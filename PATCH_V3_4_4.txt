@@ -1,0 +1,7 @@
+ALPHA PLATFORM V3.4.4 - A4 EXPORT HOTFIX
+
+- Removes the AI-readable appendix from generated PDF/image files only.
+- Keeps AI Summary and Social Copy visible and copyable in Report Studio.
+- Exports one exact A4 portrait page with proportional fit and no clipping.
+- Adds an optional 300-DPI A4 PNG optimized for LinkedIn sharing.
+- No database, route, calculation, authentication, portfolio, or reporting-data changes.

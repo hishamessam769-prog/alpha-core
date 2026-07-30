@@ -1,0 +1,18 @@
+ALPHA PLATFORM V3.4.4 VALIDATION
+
+Scope
+- Portfolio Report Studio export only.
+- No page, route, database, Supabase, authentication, permission, calculation, or report-data logic changes.
+
+Validated
+- All JS/JSX files parsed with the TypeScript JSX parser.
+- All local imports resolve.
+- CSS braces are balanced.
+- The old AI-readable PDF appendix generation is absent.
+- The AI Summary and Social Copy remain visible/copyable in the website UI.
+- PDF output uses one A4 portrait page (210 x 297 mm).
+- Image output uses a 300-DPI A4 canvas (2480 x 3508 px).
+- The report is proportionally fitted with an 8 mm safe area and no page slicing.
+- Sample render verified as exactly one A4 page with no clipped cards or overlapping text.
+- Protected backend/calculation files are byte-for-byte identical to V3.4.3.
+- No SQL update is required.

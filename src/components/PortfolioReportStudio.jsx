@@ -21,72 +21,88 @@ export default function PortfolioReportStudio({ open, onClose, portfolio, month,
 
   const fileBase = `${safeFilePart(report.portfolioName)}-${month.month_key}-${reportType}`;
 
-  const createPdfBlob = async () => {
-    if (!reportRef.current) throw new Error(isArabic ? "تعذر تجهيز التقرير" : "Could not prepare the report.");
-    const canvas = await html2canvas(reportRef.current, {
-      scale: 2,
-      backgroundColor: "#ffffff",
-      useCORS: true,
-      logging: false,
-      windowWidth: 1280,
-    });
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
-    const pageWidth = 210;
-    const pageHeight = 297;
-    const margin = 10;
-    const usableWidth = pageWidth - margin * 2;
-    const imageHeight = (canvas.height * usableWidth) / canvas.width;
-    const image = canvas.toDataURL("image/jpeg", 0.94);
-    let remaining = imageHeight;
-    let y = margin;
-    pdf.addImage(image, "JPEG", margin, y, usableWidth, imageHeight, undefined, "FAST");
-    remaining -= pageHeight - margin * 2;
-    while (remaining > 0) {
-      pdf.addPage();
-      y = margin - (imageHeight - remaining);
-      pdf.addImage(image, "JPEG", margin, y, usableWidth, imageHeight, undefined, "FAST");
-      remaining -= pageHeight - margin * 2;
-    }
+  const waitForExportAssets = async (root) => {
+    if (document.fonts?.ready) await document.fonts.ready;
+    const images = Array.from(root.querySelectorAll("img"));
+    await Promise.all(images.map((image) => {
+      if (image.complete) return image.decode?.().catch(() => undefined) || Promise.resolve();
+      return new Promise((resolve) => {
+        image.addEventListener("load", resolve, { once: true });
+        image.addEventListener("error", resolve, { once: true });
+      });
+    }));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  };
 
-    // Text appendix keeps the key data machine-readable for AI and document tools.
-    pdf.addPage();
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(16);
-    pdf.text("ALPHA CORE - AI-READABLE DATA APPENDIX", margin, 20);
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(9);
-    const ascii = (value) => String(value ?? "").replace(/[^\x20-\x7E]/g, " ").replace(/\s+/g, " ").trim();
-    const appendix = [
-      `Portfolio: ${ascii(report.portfolioName) || "ALPHA CORE Portfolio"}`,
-      `Period: ${report.frequency} - ${report.monthLabel}`,
-      `Status: ${report.status}`,
-      `Last Updated: ${report.updatedAtLabel}`,
-      `Benchmark: ${report.benchmarkTicker}`,
-      `Portfolio Return: ${formatPercent(report.portfolioReturn)}`,
-      `Benchmark Return: ${formatPercent(report.benchmarkReturn)}`,
-      `Alpha: ${formatPercent(report.alpha)}`,
-      `Cumulative Portfolio Return: ${formatPercent(report.cumulativePortfolio)}`,
-      `Cumulative Benchmark Return: ${formatPercent(report.cumulativeBenchmark)}`,
-      `Cumulative Alpha: ${formatPercent(report.cumulativeAlpha)}`,
-      `Best Stock: ${report.best ? `${report.best.ticker} ${formatPercent(report.best.mtd)}` : "N/A"}`,
-      `Worst Stock: ${report.worst ? `${report.worst.ticker} ${formatPercent(report.worst.mtd)}` : "N/A"}`,
-      "",
-      "Holdings:",
-      ...report.rows.map((row) => `${row.ticker} | Weight ${formatNumber(row.weight, 2, locale)}% | Open ${formatNumber(row.open_price, 2, locale)} | Latest ${formatNumber(row.close_price, 2, locale)} | Return ${formatPercent(row.mtd)} | Contribution ${formatPercent(row.contribution)}`),
-      "",
-      `Disclaimer: ${ascii((isArabic ? settings.disclaimer_ar : settings.disclaimer_en) || report.disclaimer) || "Educational information only. Not personalised investment advice."}`,
-    ];
-    let textY = 30;
-    for (const line of appendix) {
-      const wrapped = pdf.splitTextToSize(line, usableWidth);
-      if (textY + wrapped.length * 4.5 > pageHeight - 15) {
-        pdf.addPage();
-        textY = 18;
-      }
-      pdf.text(wrapped, margin, textY);
-      textY += Math.max(4.5, wrapped.length * 4.5);
+  const createA4Canvas = async () => {
+    if (!reportRef.current) throw new Error(isArabic ? "تعذر تجهيز التقرير" : "Could not prepare the report.");
+
+    const stage = document.createElement("div");
+    stage.className = "portfolio-export-stage-v344";
+    const exportDocument = reportRef.current.cloneNode(true);
+    exportDocument.classList.add("portfolio-report-export-v344");
+    exportDocument.querySelectorAll(".exclude-from-export,[data-export-exclude='true'],[data-html2canvas-ignore='true']").forEach((element) => element.remove());
+    stage.appendChild(exportDocument);
+    document.body.appendChild(stage);
+
+    try {
+      await waitForExportAssets(exportDocument);
+      const sourceCanvas = await html2canvas(exportDocument, {
+        scale: 3,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: Math.max(794, exportDocument.scrollWidth),
+        width: exportDocument.scrollWidth,
+        height: exportDocument.scrollHeight,
+        ignoreElements: (element) => element.classList?.contains("exclude-from-export") || element.dataset?.exportExclude === "true",
+      });
+
+      // A4 at 300 DPI. The report is proportionally fitted inside one page,
+      // preventing clipped cards, overlapping text, or accidental extra pages.
+      const a4Canvas = document.createElement("canvas");
+      a4Canvas.width = 2480;
+      a4Canvas.height = 3508;
+      const context = a4Canvas.getContext("2d");
+      if (!context) throw new Error(isArabic ? "تعذر إنشاء صفحة A4" : "Could not create the A4 export canvas.");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, a4Canvas.width, a4Canvas.height);
+
+      const margin = 94; // Approximately 8 mm at 300 DPI.
+      const availableWidth = a4Canvas.width - margin * 2;
+      const availableHeight = a4Canvas.height - margin * 2;
+      const fitScale = Math.min(availableWidth / sourceCanvas.width, availableHeight / sourceCanvas.height);
+      const drawWidth = Math.round(sourceCanvas.width * fitScale);
+      const drawHeight = Math.round(sourceCanvas.height * fitScale);
+      const drawX = Math.round((a4Canvas.width - drawWidth) / 2);
+      const drawY = margin;
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.drawImage(sourceCanvas, drawX, drawY, drawWidth, drawHeight);
+      return a4Canvas;
+    } finally {
+      stage.remove();
     }
+  };
+
+  const canvasToBlob = (canvas, type, quality) => new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error(isArabic ? "تعذر إنشاء الملف" : "Could not create the export file.")), type, quality);
+  });
+
+  const createPdfBlob = async () => {
+    const a4Canvas = await createA4Canvas();
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+    const image = a4Canvas.toDataURL("image/jpeg", 0.96);
+    pdf.addImage(image, "JPEG", 0, 0, 210, 297, undefined, "FAST");
     return pdf.output("blob");
+  };
+
+  const createImageBlob = async () => {
+    const a4Canvas = await createA4Canvas();
+    return canvasToBlob(a4Canvas, "image/png");
   };
 
   const exportPdf = async () => {
@@ -95,6 +111,19 @@ export default function PortfolioReportStudio({ open, onClose, portfolio, month,
       const blob = await createPdfBlob();
       downloadBlob(blob, `${fileBase}.pdf`);
       onMessage?.(isArabic ? "تم إنشاء Portfolio Report PDF" : "Portfolio Report PDF generated.");
+    } catch (error) {
+      onMessage?.(error.message);
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const exportImage = async () => {
+    setWorking(true);
+    try {
+      const blob = await createImageBlob();
+      downloadBlob(blob, `${fileBase}-linkedin-a4.png`);
+      onMessage?.(isArabic ? "تم إنشاء صورة A4 عالية الجودة لـ LinkedIn" : "High-resolution A4 LinkedIn image generated.");
     } catch (error) {
       onMessage?.(error.message);
     } finally {
@@ -148,7 +177,8 @@ export default function PortfolioReportStudio({ open, onClose, portfolio, month,
               <option value="monthly">{isArabic ? "شهري" : "Monthly"}</option>
             </select>
           </label>
-          <button className="button gold" disabled={working} onClick={exportPdf}><Download size={15}/>{isArabic ? "Generate Portfolio Report" : "Generate Portfolio Report"}</button>
+          <button className="button gold" disabled={working} onClick={exportPdf}><Download size={15}/>{isArabic ? "تحميل تقرير A4 PDF" : "Download A4 PDF"}</button>
+          <button className="button subtle" disabled={working} onClick={exportImage}><Download size={15}/>{isArabic ? "صورة A4 لـ LinkedIn" : "LinkedIn A4 Image"}</button>
           <button className="button subtle" onClick={() => { setActiveText("ai"); copyText(aiSummary, "AI Summary"); }}><Sparkles size={15}/>Generate AI Summary</button>
           <button className="button green" disabled={working} onClick={createMarketingPackage}><FileArchive size={15}/>Create Marketing Package</button>
         </div>
@@ -158,7 +188,7 @@ export default function PortfolioReportStudio({ open, onClose, portfolio, month,
             <PortfolioReportDocument report={report} locale={locale} isArabic={isArabic} reportRef={reportRef} settings={settings}/>
           </div>
 
-          <aside className="report-copy-panel-v231" data-html2canvas-ignore="true">
+          <aside className="report-copy-panel-v231 exclude-from-export" data-html2canvas-ignore="true" data-export-exclude="true">
             <div className="copy-tabs-v231">
               <button className={activeText === "ai" ? "active" : ""} onClick={() => setActiveText("ai")}><Sparkles size={13}/>AI Summary</button>
               <button className={activeText === "social" ? "active" : ""} onClick={() => setActiveText("social")}><FileText size={13}/>Social Copy</button>

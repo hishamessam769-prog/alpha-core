@@ -1685,3 +1685,31 @@ img{height:auto}
 .comparison-legend-v343>div{min-height:44px;padding-block:8px}
 .comparison-legend-v343 span{justify-items:start;text-align:start}
 .comparison-legend-v343 small{font-size:8px;font-weight:850;color:var(--text-2)}
+
+/* V3.4.4 - single-page A4 portfolio export. Screen UI remains unchanged. */
+.portfolio-export-stage-v344{
+  position:fixed;
+  left:-100000px;
+  top:0;
+  width:210mm;
+  margin:0;
+  padding:0;
+  overflow:visible;
+  background:#fff;
+  pointer-events:none;
+  z-index:-1;
+}
+.portfolio-report-document-v231.portfolio-report-export-v344{
+  box-sizing:border-box;
+  width:210mm;
+  max-width:none;
+  min-height:0;
+  margin:0;
+  padding:10mm 11mm;
+  box-shadow:none;
+  transform:none!important;
+}
+.exclude-from-export{ }
+@media print{
+  .exclude-from-export,[data-export-exclude="true"]{display:none!important}
+}
