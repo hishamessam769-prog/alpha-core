@@ -1,0 +1,34 @@
+ALPHA PLATFORM V3.4.3 — PORTFOLIO 5-SECOND LAYOUT
+
+Scope
+-----
+Frontend layout consolidation on the Portfolio/Member Dashboard only.
+No database, route, authentication, permission, calculation, report, export or Supabase change.
+
+Changed
+-------
+1. Replaced six scattered top KPI cards and six repeated factsheet KPI cards with one four-metric hero banner:
+   - Current month portfolio performance
+   - Current month Alpha
+   - Historical cumulative Alpha
+   - Benchmark performance and its mathematical impact on Alpha
+
+2. Preserved the native-SVG cumulative performance chart and all 3M/6M/1Y/ALL filters unchanged.
+
+3. Preserved the native-SVG central portfolio-versus-benchmark donut logic unchanged, while removing the duplicated side holding rings.
+
+4. Removed the separate allocation donut, the repeated detailed holdings table and the old holding-card block.
+
+5. Added one Smart Holdings grid as the single source of current holding detail. Each card shows:
+   - Ticker, company and weight
+   - Opening and current price
+   - Stock return
+   - Exact portfolio contribution
+   - Investment thesis
+   - Linked research action when available
+
+6. Added responsive one/two/three-column behaviour, centred metric content and restrained positive/negative impact animation.
+
+Deployment
+----------
+No SQL is required. Upload the repository contents and redeploy the existing Vercel project.

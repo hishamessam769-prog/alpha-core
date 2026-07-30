@@ -1,0 +1,15 @@
+ALPHA PLATFORM V3.4.3 VALIDATION
+
+- 60 JS/JSX files parsed successfully with the TypeScript JSX parser.
+- 0 JS/JSX syntax errors.
+- 242 local imports checked.
+- 0 missing local imports.
+- 0 unresolved local-name diagnostics.
+- CSS passed PostCSS parsing.
+- App.jsx and all existing routes are byte-for-byte identical to V3.4.2.
+- Supabase SQL and client configuration are byte-for-byte identical to V3.4.2.
+- AuthContext, calculations, recommendations, reporting and ZIP export are byte-for-byte identical to V3.4.2.
+- PerformanceChart.jsx is byte-for-byte identical to V3.4.2.
+- Central comparison-ring calculation and native SVG rendering are preserved.
+- No new SQL or migration added.
+- Full npm build could not run because the isolated package registry returns 404 for @supabase/supabase-js.

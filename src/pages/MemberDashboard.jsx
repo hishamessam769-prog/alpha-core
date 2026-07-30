@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Activity, ArrowUpRight, BriefcaseBusiness, CalendarClock, Check, CheckCircle2, Clock3, Download, FileText, Layers3, Link2, RefreshCw, ShieldCheck, Sparkles, Target, TrendingDown, TrendingUp, UsersRound } from "lucide-react";
+import { Activity, ArrowUpRight, Check, Clock3, Download, FileText, Link2, RefreshCw, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { Link, useParams } from "react-router-dom";
@@ -8,10 +8,8 @@ import AuthorAttribution from "../components/AuthorAttribution";
 import CompanyMark from "../components/CompanyMark";
 import DashboardHeader from "../components/DashboardHeader";
 import InsightDrawer from "../components/InsightDrawer";
-import KpiCard from "../components/KpiCard";
 import MarketNewsWidget from "../components/MarketNewsWidget";
 import PerformanceChart from "../components/PerformanceChart";
-import AllocationDonutChart from "../components/AllocationDonutChart";
 import PortfolioVisualSuite from "../components/PortfolioVisualSuite";
 import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
@@ -26,7 +24,7 @@ import {
   formatPercent,
   monthLabel,
 } from "../lib/calculations";
-import { recommendationMetrics, recommendationSummary } from "../lib/recommendations";
+import { recommendationMetrics } from "../lib/recommendations";
 import { RECOMMENDATION_IMAGE_TITLE } from "../lib/recommendationMedia";
 
 const allocationColours = ["#20d3ff", "#8b5cf6", "#2dd4bf", "#60a5fa", "#f97316", "#6366f1", "#ec4899", "#14b8a6", "#a78bfa", "#94a3b8"];
@@ -128,13 +126,11 @@ export default function MemberDashboard() {
   const fullSeries = useMemo(() => buildMonthlyPerformanceSeries(months, locale), [months, locale]);
   const chartData = useMemo(() => filterSeriesByRange(fullSeries, range), [fullSeries, range]);
   const recentUpdates = [...trackRecord].reverse().slice(0, 4);
-  const recommendationStats = useMemo(() => recommendationSummary(recommendations, prices), [recommendations, prices]);
   const recommendationByTicker = useMemo(() => Object.fromEntries(recommendations.map((item) => [String(item.ticker).toUpperCase(), item])), [recommendations]);
   const latestRecommendation = recommendations[0] || null;
   const latestReport = reports[0] || null;
   const bestHolding = [...(metrics.rows || [])].sort((a, b) => Number(b.mtd || 0) - Number(a.mtd || 0))[0];
   const worstHolding = [...(metrics.rows || [])].sort((a, b) => Number(a.mtd || 0) - Number(b.mtd || 0))[0];
-  const allocationData = (metrics.rows || []).map((row) => ({ name: row.ticker, value: Number(row.weight || 0) }));
   const portfolioTitle = isArabic && currentPortfolio?.name_ar ? currentPortfolio.name_ar : currentPortfolio?.name;
   const portfolioAuthor = profiles.find((item) => item.id === currentPortfolio?.created_by) || null;
 
@@ -234,42 +230,59 @@ export default function MemberDashboard() {
             </div>
           </section>
 
-          <section className="kpi-grid-v21 kpi-grid-v3 executive-kpis-v3">
-            <KpiCard title={isArabic ? "عائد المحفظة" : "Portfolio return"} value={formatPercent(selectedReturns.portfolio)} note={monthLabel(selected.month_key, true, locale)} tone={selectedReturns.portfolio >= 0 ? "blue" : "red"} icon={<TrendingUp/>} badge="MTD"/>
-            <KpiCard title={isArabic ? "عائد المؤشر" : "Benchmark return"} value={formatPercent(selectedReturns.benchmark)} note={selected.benchmark_ticker || "EGX30CAP"} tone={selectedReturns.benchmark >= 0 ? "gold" : "red"} icon={<BarChart3Icon/>} badge="MTD"/>
-            <KpiCard title="Alpha" value={formatPercent(selectedReturns.portfolio - selectedReturns.benchmark)} note={isArabic ? "المحفظة ناقص المؤشر" : "Portfolio less benchmark"} tone={selectedReturns.portfolio - selectedReturns.benchmark >= 0 ? "green" : "red"} icon={<Sparkles/>}/>
-            <KpiCard title={isArabic ? "توصيات مفتوحة" : "Open recommendations"} value={String(recommendationStats.open)} note={`${recommendationStats.invest} ${isArabic ? "مناسبة للدخول" : "rated invest"}`} tone="neutral" icon={<Target/>}/>
-            <KpiCard title={isArabic ? "نسبة النجاح" : "Success rate"} value={formatPercent(recommendationStats.successRate)} note={isArabic ? "من التوصيات المغلقة" : "Across closed calls"} tone={recommendationStats.successRate >= 50 ? "green" : "red"} icon={<CheckCircle2/>}/>
-            <KpiCard title={isArabic ? "المراكز الحالية" : "Current holdings"} value={String(metrics.rows.length)} note={`${formatNumber(metrics.rows.reduce((sum, row) => sum + Number(row.weight || 0), 0), 0, locale)}% ${isArabic ? "مستثمر" : "allocated"}`} tone="neutral" icon={<Layers3/>}/>
+          <section className="portfolio-hero-metrics-v343" aria-label={isArabic ? "ملخص حالة المحفظة" : "Portfolio status summary"}>
+            <div className="portfolio-hero-metric-v343 primary">
+              <span>{isArabic ? "أداء الشهر الحالي" : "Current month performance"}</span>
+              <b className={selectedReturns.portfolio >= 0 ? "positive" : "negative"}>{formatPercent(selectedReturns.portfolio)}</b>
+              <small>{monthLabel(selected.month_key, true, locale)}</small>
+            </div>
+            <div className="portfolio-hero-metric-v343 alpha">
+              <span>{isArabic ? "ألفا الشهر الحالي" : "Current month Alpha"}</span>
+              <b className={selectedReturns.portfolio - selectedReturns.benchmark >= 0 ? "positive" : "negative"}>{formatPercent(selectedReturns.portfolio - selectedReturns.benchmark)}</b>
+              <small>{isArabic ? "المحفظة ناقص المؤشر" : "Portfolio less benchmark"}</small>
+            </div>
+            <div className="portfolio-hero-metric-v343 cumulative">
+              <span>{isArabic ? "الألفا التاريخية" : "Historical cumulative Alpha"}</span>
+              <b className={Number(latestCumulative.cumulativeAlpha || 0) >= 0 ? "positive" : "negative"}>{formatPercent(latestCumulative.cumulativeAlpha)}</b>
+              <small>{isArabic ? "منذ الإطلاق" : "Since launch"}</small>
+            </div>
+            <div className="portfolio-hero-metric-v343 benchmark">
+              <span>{selected.benchmark_ticker || currentPortfolio?.benchmark_ticker || "EGX30CAP"}</span>
+              <b className={selectedReturns.benchmark >= 0 ? "benchmark-positive" : "negative"}>{formatPercent(selectedReturns.benchmark)}</b>
+              <small>{isArabic ? "الأثر على الألفا" : "Impact on Alpha"}: <em className={-selectedReturns.benchmark >= 0 ? "positive" : "negative"}>{formatPercent(-selectedReturns.benchmark)}</em></small>
+            </div>
           </section>
 
-          <PortfolioVisualSuite
-            holdings={metrics.rows}
-            portfolioReturn={selectedReturns.portfolio}
-            benchmarkReturn={selectedReturns.benchmark}
-            benchmarkTicker={selected.benchmark_ticker || currentPortfolio?.benchmark_ticker || "EGX30CAP"}
-            locale={locale}
-            isArabic={isArabic}
-          />
+          <section className="portfolio-analysis-focus-v343">
+            <PortfolioVisualSuite
+              portfolioReturn={selectedReturns.portfolio}
+              benchmarkReturn={selectedReturns.benchmark}
+              benchmarkTicker={selected.benchmark_ticker || currentPortfolio?.benchmark_ticker || "EGX30CAP"}
+              isArabic={isArabic}
+            />
 
-          <section className="dashboard-primary-grid dashboard-primary-v3">
-            <article className="panel-v21 chart-panel-v21 chart-panel-v3">
+            <article className="panel-v21 chart-panel-v21 chart-panel-v3 portfolio-performance-focus-v343">
               <div className="panel-heading-v21"><div><span className="eyebrow">CUMULATIVE PERFORMANCE</span><h2>{t("performanceOverview")}</h2><p>{isArabic ? "أداء المحفظة والمؤشر والألفا منذ الإطلاق." : "Portfolio, benchmark and Alpha since launch."}</p></div><div className="range-switch" data-html2canvas-ignore="true">{["3M", "6M", "1Y", "ALL"].map((item) => <button key={item} className={range === item ? "active" : ""} onClick={() => setRange(item)}>{item}</button>)}</div></div>
               <PerformanceChart data={chartData}/>
-              <div className="chart-footnote-v3"><span>{isArabic ? "منذ الإطلاق" : "Since launch"}: <b className={Number(latestCumulative.cumulativePortfolio || 0) >= 0 ? "positive" : "negative"}>{formatPercent(latestCumulative.cumulativePortfolio)}</b></span><span>{isArabic ? "الألفا التراكمية" : "Cumulative Alpha"}: <b className={Number(latestCumulative.cumulativeAlpha || 0) >= 0 ? "positive" : "negative"}>{formatPercent(latestCumulative.cumulativeAlpha)}</b></span></div>
+              <div className="chart-footnote-v3"><span>{isArabic ? "عائد المحفظة منذ الإطلاق" : "Portfolio since launch"}: <b className={Number(latestCumulative.cumulativePortfolio || 0) >= 0 ? "positive" : "negative"}>{formatPercent(latestCumulative.cumulativePortfolio)}</b></span><span>{isArabic ? "عائد المؤشر منذ الإطلاق" : "Benchmark since launch"}: <b className={Number(latestCumulative.cumulativeBenchmark || 0) >= 0 ? "benchmark-positive" : "negative"}>{formatPercent(latestCumulative.cumulativeBenchmark)}</b></span></div>
             </article>
+          </section>
 
-            <article className="panel-v21 allocation-panel-v3">
-              <div className="panel-heading-v21"><div><span className="eyebrow">CURRENT ALLOCATION</span><h2>{isArabic ? "توزيع المحفظة" : "Portfolio allocation"}</h2><p>{isArabic ? "الأوزان الرسمية للشهر المحدد." : "Official weights for the selected month."}</p></div></div>
-              <AllocationDonutChart
-                data={allocationData}
-                colours={allocationColours}
-                holdingsCount={metrics.rows.length}
-                locale={locale}
-                isArabic={isArabic}
-              />
-              <div className="allocation-legend-v3">{allocationData.map((entry, index) => <span key={entry.name}><i style={{ backgroundColor: allocationColours[index % allocationColours.length] }}/><b>{entry.name}</b><em>{formatNumber(entry.value, 1, locale)}%</em></span>)}</div>
-            </article>
+          <section className="smart-holdings-section-v343 panel-v21">
+            <div className="panel-heading-v21 smart-holdings-heading-v343"><div><span className="eyebrow">STOCK IMPACT MAP</span><h2>{isArabic ? "تأثير مكونات المحفظة" : "Portfolio impact by holding"}</h2><p>{isArabic ? "كل سهم يظهر مرة واحدة فقط مع السعر الافتتاحي والحالي وتأثيره والفكرة الاستثمارية." : "Each holding appears once, with its opening price, current price, exact contribution and investment thesis."}</p></div><span className={`status-pill ${selected.is_closed ? "final" : "live"}`}>{selected.is_closed ? t("final") : t("live")}</span></div>
+            <div className="smart-holdings-grid-v343">{metrics.rows.map((row, index) => {
+              const research = recommendationByTicker[String(row.ticker).toUpperCase()];
+              const company = prices[String(row.ticker).toUpperCase()]?.company_name || research?.company_name || row.company_name || row.ticker;
+              const thesis = row.investment_thesis || research?.thesis || "";
+              const positiveImpact = Number(row.contribution || 0) >= 0;
+              return <article className={`smart-holding-card-v343 ${positiveImpact ? "positive-impact" : "negative-impact"}`} key={row.id || row.ticker} style={{ "--holding-colour": allocationColours[index % allocationColours.length] }}>
+                <header><CompanyMark ticker={row.ticker} name={company}/><div><h3>{row.ticker}</h3><p>{company}</p></div><span className="smart-weight-v343">{formatNumber(row.weight, 1, locale)}%</span></header>
+                <div className="smart-holding-prices-v343"><span><small>{isArabic ? "سعر الافتتاح" : "Opening price"}</small><b>{formatNumber(row.open_price, 2, locale)}</b></span><i/><span><small>{isArabic ? "السعر الحالي" : "Current price"}</small><b>{formatNumber(row.close_price, 2, locale)}</b></span></div>
+                <div className="smart-impact-row-v343"><span><small>{isArabic ? "عائد السهم" : "Stock return"}</small><b className={row.mtd >= 0 ? "positive" : "negative"}>{formatPercent(row.mtd)}</b></span><span className="smart-impact-value-v343"><small>{isArabic ? "التأثير على المحفظة" : "Portfolio impact"}</small><b className={positiveImpact ? "positive" : "negative"}>{formatPercent(row.contribution)}</b></span></div>
+                <div className="smart-thesis-v343"><small>{isArabic ? "الفكرة الاستثمارية" : "Investment thesis"}</small><p>{thesis || (isArabic ? "لم تتم إضافة الفكرة الاستثمارية لهذا السهم بعد." : "No investment thesis has been added for this holding yet.")}</p></div>
+                <footer>{research ? <Link to={`/recommendations/${research.id}`}>{isArabic ? "فتح البحث المرتبط" : "Open linked research"}<ArrowUpRight size={14}/></Link> : <span>{isArabic ? "لا يوجد بحث مرتبط" : "No linked research"}</span>}</footer>
+              </article>;
+            })}</div>
           </section>
 
           <section className="intelligence-dashboard-grid-v3">
@@ -281,32 +294,7 @@ export default function MemberDashboard() {
           <MarketNewsWidget reports={reports} recommendations={recommendations} updates={updates} isArabic={isArabic} locale={locale}/>
 
           <section className="factsheet-hero-v3">
-            <div className="factsheet-title-v3"><span className="eyebrow">ALPHA CORE · PORTFOLIO FACTSHEET</span><h2>{portfolioTitle}</h2><p>{currentPortfolio?.description || selected.public_commentary || t("dashboardSubtitle")}</p><div className="factsheet-meta-v3"><span><small>{isArabic ? "مدير المحفظة" : "Manager"}</small><b>{currentPortfolio?.manager_name || "ALPHA CORE Investment Committee"}</b></span><span><small>{isArabic ? "الاستراتيجية" : "Strategy"}</small><b>{currentPortfolio?.strategy_name || (isArabic ? "أسهم مصرية مركزة" : "Focused Egyptian equities")}</b></span><span><small>{isArabic ? "تاريخ الإطلاق" : "Launch date"}</small><b>{months[0]?.month_key ? monthLabel(months[0].month_key, false, locale) : "—"}</b></span><span><small>{t("lastUpdated")}</small><b>{dateTimeLabel(selected.updated_at, locale)}</b></span></div><AuthorAttribution profile={portfolioAuthor} authorId={currentPortfolio?.created_by} compact label={isArabic ? "أنشأها ويديرها" : "CREATED & MANAGED BY"}/></div><div className="factsheet-status-v3"><span className={`status-pill ${selected.is_closed ? "final" : "live"}`}>{selected.is_closed ? t("final") : t("live")}</span><b>{formatPercent(selectedReturns.portfolio - selectedReturns.benchmark)}</b><small>MONTHLY ALPHA</small></div>
-          </section>
-
-          <section className="kpi-grid-v21 factsheet-kpis-v3">
-            <KpiCard title={t("portfolioMtd")} value={formatPercent(selectedReturns.portfolio)} note={isArabic ? "العائد المرجح للشهر" : "Weighted monthly return"} tone={selectedReturns.portfolio >= 0 ? "blue" : "red"}/>
-            <KpiCard title={t("benchmarkMtd")} value={formatPercent(selectedReturns.benchmark)} note={selected.benchmark_ticker || "EGX30CAP"} tone={selectedReturns.benchmark >= 0 ? "gold" : "red"}/>
-            <KpiCard title={t("monthlyAlpha")} value={formatPercent(selectedReturns.portfolio - selectedReturns.benchmark)} note={isArabic ? "عائد زائد عن المؤشر" : "Excess return"} tone={selectedReturns.portfolio - selectedReturns.benchmark >= 0 ? "green" : "red"}/>
-            <KpiCard title={t("cumulativePortfolio")} value={formatPercent(latestCumulative.cumulativePortfolio)} note={isArabic ? "منذ الإطلاق" : "Since launch"} tone={Number(latestCumulative.cumulativePortfolio || 0) >= 0 ? "blue" : "red"}/>
-            <KpiCard title={t("cumulativeBenchmark")} value={formatPercent(latestCumulative.cumulativeBenchmark)} note={isArabic ? "منذ الإطلاق" : "Since launch"} tone={Number(latestCumulative.cumulativeBenchmark || 0) >= 0 ? "gold" : "red"}/>
-            <KpiCard title={t("cumulativeAlpha")} value={formatPercent(latestCumulative.cumulativeAlpha)} note={isArabic ? "منذ الإطلاق" : "Since launch"} tone={Number(latestCumulative.cumulativeAlpha || 0) >= 0 ? "green" : "red"}/>
-          </section>
-
-          <section className="holding-cards-section-v3 panel-v21">
-            <div className="panel-heading-v21"><div><span className="eyebrow">CURRENT HOLDINGS</span><h2>{isArabic ? "المراكز الحالية" : "Current portfolio holdings"}</h2><p>{isArabic ? "بطاقات مؤسسية توضح الوزن والسعر والعائد والمساهمة." : "Institutional holding cards with weight, price, return and contribution."}</p></div><span className={`status-pill ${selected.is_closed ? "final" : "live"}`}>{selected.is_closed ? t("final") : t("live")}</span></div>
-            <div className="holding-cards-v3">{metrics.rows.map((row, index) => {
-              const research = recommendationByTicker[String(row.ticker).toUpperCase()];
-              const company = prices[String(row.ticker).toUpperCase()]?.company_name || research?.company_name || row.company_name || row.ticker;
-              const potential = research ? recommendationMetrics(research, prices).upsideToTarget : null;
-              const thesis = row.investment_thesis || research?.thesis || "";
-              return <article className="holding-card-v3" key={row.id || row.ticker}><header><CompanyMark ticker={row.ticker} name={company}/><div><h3>{row.ticker}</h3><p>{company}</p></div><span style={{ borderColor: allocationColours[index % allocationColours.length] }}>{formatNumber(row.weight, 1, locale)}%</span></header><div className="holding-price-grid-v3"><span><small>{isArabic ? "السعر الحالي" : "Current price"}</small><b>{formatNumber(row.close_price, 2, locale)}</b></span><span><small>{isArabic ? "المستهدف" : "Target"}</small><b>{research ? formatNumber(research.target_price, 2, locale) : "—"}</b></span><span><small>{isArabic ? "العائد" : "Return"}</small><b className={row.mtd >= 0 ? "positive" : "negative"}>{formatPercent(row.mtd)}</b></span><span><small>{isArabic ? "المساهمة" : "Contribution"}</small><b className={row.contribution >= 0 ? "positive" : "negative"}>{formatPercent(row.contribution)}</b></span></div><div className="potential-progress-v3"><span><small>{isArabic ? "المتبقي للمستهدف" : "Potential"}</small><b className={Number(potential || 0) >= 0 ? "positive" : "negative"}>{potential === null ? "—" : formatPercent(potential)}</b></span><i><em style={{ width: `${Math.min(100, Math.max(4, 50 + Number(row.mtd || 0)))}%` }}/></i></div><div className="holding-thesis-v31"><small>{isArabic ? "الفكرة الاستثمارية" : "Investment thesis"}</small><p>{thesis || (isArabic ? "لم تتم إضافة الفكرة الاستثمارية لهذا السهم بعد." : "No investment thesis has been added for this holding yet.")}</p></div>{research ? <Link to={`/recommendations/${research.id}`}>{isArabic ? "بحث سريع" : "Quick research"}<ArrowUpRight size={14}/></Link> : <span className="holding-no-research-v3">{isArabic ? "لا يوجد بحث مرتبط" : "No linked research"}</span>}</article>;
-            })}</div>
-          </section>
-
-          <section className="portfolio-section-v21 panel-v21 institutional-table-panel-v3">
-            <div className="panel-heading-v21"><div><span className="eyebrow">DETAILED HOLDINGS</span><h2>{t("officialPortfolio")}</h2><p>{t("officialPortfolioText")}</p></div></div>
-            <div className="table-scroll"><table className="data-table-v21 holdings-detail-table-v31"><thead><tr><th>{t("ticker")}</th><th>{t("weight")}</th><th>{t("open")}</th><th>{t("latest")}</th><th>{t("return")}</th><th>{t("contribution")}</th><th>{isArabic ? "الفكرة الاستثمارية" : "Investment thesis"}</th></tr></thead><tbody>{metrics.rows.map((row) => { const linkedResearch = recommendationByTicker[String(row.ticker).toUpperCase()]; const thesis = row.investment_thesis || linkedResearch?.thesis || "—"; return <tr key={row.id || row.ticker}><td><b className="ticker-chip">{row.ticker}</b></td><td>{formatNumber(row.weight, 2, locale)}%</td><td>{formatNumber(row.open_price, 2, locale)}</td><td>{formatNumber(row.close_price, 2, locale)}</td><td className={row.mtd >= 0 ? "positive" : "negative"}><b>{formatPercent(row.mtd)}</b></td><td className={row.contribution >= 0 ? "positive" : "negative"}><b>{formatPercent(row.contribution)}</b></td><td className="table-thesis-v31">{thesis}</td></tr>; })}</tbody></table></div>
+            <div className="factsheet-title-v3"><span className="eyebrow">ALPHA CORE · PORTFOLIO FACTSHEET</span><h2>{portfolioTitle}</h2><p>{currentPortfolio?.description || selected.public_commentary || t("dashboardSubtitle")}</p><div className="factsheet-meta-v3"><span><small>{isArabic ? "مدير المحفظة" : "Manager"}</small><b>{currentPortfolio?.manager_name || "ALPHA CORE Investment Committee"}</b></span><span><small>{isArabic ? "الاستراتيجية" : "Strategy"}</small><b>{currentPortfolio?.strategy_name || (isArabic ? "أسهم مصرية مركزة" : "Focused Egyptian equities")}</b></span><span><small>{isArabic ? "تاريخ الإطلاق" : "Launch date"}</small><b>{months[0]?.month_key ? monthLabel(months[0].month_key, false, locale) : "—"}</b></span><span><small>{t("lastUpdated")}</small><b>{dateTimeLabel(selected.updated_at, locale)}</b></span></div><AuthorAttribution profile={portfolioAuthor} authorId={currentPortfolio?.created_by} compact label={isArabic ? "أنشأها ويديرها" : "CREATED & MANAGED BY"}/></div><div className="factsheet-status-v3 factsheet-status-v343"><span className={`status-pill ${selected.is_closed ? "final" : "live"}`}>{selected.is_closed ? t("final") : t("live")}</span><b>{monthLabel(selected.month_key, false, locale)}</b><small>{isArabic ? "الفترة المختارة" : "SELECTED PERIOD"}</small></div>
           </section>
 
           <section className="track-record-v21 panel-v21 institutional-table-panel-v3">
@@ -330,6 +318,3 @@ export default function MemberDashboard() {
   );
 }
 
-function BarChart3Icon() {
-  return <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18"/><path d="M7 16v-4M12 16V8M17 16V5"/></svg>;
-}
