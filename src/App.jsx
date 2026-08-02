@@ -24,6 +24,8 @@ import PublishingStudio from "./pages/PublishingStudio";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SupportWidget from "./components/SupportWidget";
 import SmartSurvey from "./components/SmartSurvey";
+import MobileBottomNav from "./components/MobileBottomNav";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import { useAuth } from "./context/AuthContext";
 
 export default function App() {
@@ -63,6 +65,8 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {showMemberExperience && <><SupportWidget/><SmartSurvey/></>}
+      <MobileBottomNav/>
+      <PWAInstallPrompt/>
     </>
   );
 }

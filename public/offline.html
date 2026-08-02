@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#071b14">
+  <title>ALPHA - Offline</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#f6faf4;color:#0b2117;font:16px/1.6 Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.card{width:min(100%,420px);padding:32px;border:1px solid #d9e4dc;border-radius:18px;background:#fff;box-shadow:0 20px 55px rgba(7,27,20,.1);text-align:center}.icon{width:74px;height:74px;margin:0 auto 20px;border-radius:22px;background:#071b14 url('/icons/icon-192.png') center/cover no-repeat}h1{margin:0 0 8px;font-size:28px}p{margin:0;color:#617068}button{margin-top:22px;border:0;border-radius:12px;padding:12px 18px;background:#071b14;color:#fff;font-weight:800;cursor:pointer}small{display:block;margin-top:18px;color:#819087}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="icon" aria-hidden="true"></div>
+    <h1>You are offline</h1>
+    <p>Previously loaded ALPHA screens and assets remain available. Reconnect to refresh live prices and published data.</p>
+    <button type="button" onclick="location.reload()">Try again</button>
+    <small>Live market data requires an internet connection.</small>
+  </main>
+</body>
+</html>

@@ -16,7 +16,8 @@ export function ThemeProvider({ children }) {
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
     window.localStorage.setItem(STORAGE_KEY, theme);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#0b0f14" : "#f3f5f7");
+    const mobileApp = window.matchMedia?.("(max-width: 767px)").matches || window.matchMedia?.("(display-mode: standalone)").matches;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", mobileApp ? "#071b14" : (theme === "dark" ? "#0b0f14" : "#f3f5f7"));
   }, [theme]);
 
   const value = useMemo(() => ({

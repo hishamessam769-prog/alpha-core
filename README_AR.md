@@ -1,4 +1,22 @@
-# ALPHA PLATFORM V3.4.4
+# ALPHA PLATFORM V3.5.0 - PWA + MOBILE APP EXPERIENCE
+
+تحديث Frontend فقط فوق V3.4.4 يحول المنصة إلى Progressive Web App ويعيد بناء تجربة الموبايل تحت 768px اعتمادًا على ملف `app.pdf` المرفق، مع الحفاظ على نسخة Desktop والـRoutes والـCharts والـSupabase والحسابات.
+
+## أهم إضافات V3.5
+
+- `manifest.json` وService Worker وOffline App Shell.
+- Add to Home Screen وStandalone mode وإخفاء واجهة المتصفح عند تشغيل التطبيق المثبت.
+- App Icons كاملة لـAndroid وiOS وMaskable icon.
+- Bottom Navigation ثابتة من خمس وجهات مستوحاة من المرجع.
+- Mobile Top App Bar ومسافات وبطاقات وتدرج بصري جديد تحت 768px فقط.
+- Safe-area support وNative press states وحركات انتقال خفيفة.
+- لا يوجد SQL جديد ولا تعديل على قاعدة البيانات.
+
+للتفاصيل وخطوات الاختبار راجع `PWA_V3_5_AR.md`.
+
+---
+
+## سجل النسخة السابقة: ALPHA PLATFORM V3.4.4
 
 تحديث Frontend تدريجي فوق V3.3 يركز على ثبات الـLayout، تبسيط الـHeader، رفع صورة خاصة لتوصيات الأسهم، وتجميع أسعار كل الرموز النشطة في قالب Excel واحد ذكي.
 

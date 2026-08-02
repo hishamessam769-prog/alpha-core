@@ -7,6 +7,8 @@ import { LanguageProvider } from "./context/LanguageContext";
 import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import "./styles.css";
+import "./mobile-pwa.css";
+import { registerAlphaServiceWorker } from "./lib/pwa";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -23,3 +25,5 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+registerAlphaServiceWorker();

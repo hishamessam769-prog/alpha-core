@@ -1,0 +1,21 @@
+ALPHA PLATFORM V3.5.0 VALIDATION
+================================
+
+PASS - 63 JavaScript/JSX files parsed with TypeScript parser.
+PASS - 248 local imports resolved.
+PASS - src/styles.css and src/mobile-pwa.css parsed with PostCSS.
+PASS - manifest.json, package.json and vercel.json parsed as valid JSON.
+PASS - Service Worker passed node syntax validation.
+PASS - 192x192, 512x512, maskable 512x512 and Apple 180x180 icons verified.
+PASS - Manifest display=standalone, scope=/ and dashboard start_url verified.
+PASS - iOS/Android PWA meta tags and viewport safe-area tags verified.
+PASS - All 28 V3.4.4 routes preserved in the same order.
+PASS - Desktop stylesheet is byte-for-byte identical to V3.4.4.
+PASS - PerformanceChart.jsx and PortfolioVisualSuite.jsx are byte-for-byte identical.
+PASS - Calculations, recommendation logic, reporting, Supabase client, AuthContext and SQL are byte-for-byte identical.
+PASS - Mobile chart selectors remain visible and fluid below 768px.
+PASS - Mobile layout is isolated in a final imported stylesheet below 768px.
+
+BUILD ENVIRONMENT NOTE
+----------------------
+A complete npm production build could not be executed in the isolated environment because the internal npm registry returned 404 for @supabase/supabase-js. No package-lock or node_modules files were added. Source parsing, imports, CSS, manifest, service worker, route comparison, protected-file hashes and icon checks passed.

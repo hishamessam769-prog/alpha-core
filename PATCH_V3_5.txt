@@ -1,0 +1,20 @@
+ALPHA PLATFORM V3.5.0
+PWA and mobile-only UI/UX release.
+
+ADDED
+- Web App Manifest
+- Service Worker and offline shell
+- 192px, 512px, maskable and Apple touch icons
+- Add to Home Screen install helper
+- Five-item fixed mobile navigation
+- Safe-area support for iOS and Android standalone mode
+- Dedicated mobile stylesheet based on the supplied 9-page reference PDF
+
+PRESERVED
+- All 28 routes
+- Supabase schema and SQL
+- Authentication and RBAC
+- Portfolio and recommendation calculations
+- PerformanceChart and PortfolioVisualSuite logic
+- PDF/report exports
+- Desktop layout and visual system
