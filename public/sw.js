@@ -1,4 +1,4 @@
-const VERSION = "alpha-pwa-v3.5.0";
+const VERSION = "alpha-pwa-v3.5.1";
 const STATIC_CACHE = `${VERSION}-static`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const OFFLINE_URL = "/offline.html";
@@ -6,11 +6,12 @@ const PRECACHE = [
   "/",
   "/index.html",
   OFFLINE_URL,
-  "/manifest.json",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/icons/maskable-512.png",
-  "/icons/apple-touch-icon.png"
+  "/manifest.json?v=3.5.1",
+  "/icons/alpha-core-192.png",
+  "/icons/alpha-core-512.png",
+  "/icons/alpha-core-maskable-512.png",
+  "/icons/apple-touch-icon-v351.png",
+  "/icons/favicon-32-v351.png"
 ];
 
 self.addEventListener("install", (event) => {

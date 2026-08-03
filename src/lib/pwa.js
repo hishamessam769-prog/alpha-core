@@ -3,7 +3,8 @@ export function registerAlphaServiceWorker() {
 
   window.addEventListener("load", async () => {
     try {
-      const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
+      await registration.update();
       document.documentElement.classList.toggle("is-standalone", window.matchMedia("(display-mode: standalone)").matches || Boolean(window.navigator.standalone));
 
       registration.addEventListener("updatefound", () => {

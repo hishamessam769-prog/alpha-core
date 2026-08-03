@@ -7,18 +7,26 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="ALPHA" />
-    <meta name="application-name" content="ALPHA PLATFORM" />
+    <meta name="apple-mobile-web-app-title" content="ALPHA CORE" />
+    <meta name="application-name" content="ALPHA CORE" />
+    <meta name="msapplication-TileColor" content="#071b14" />
     <meta name="format-detection" content="telephone=no" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="manifest" href="/manifest.json?v=3.5.1" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-v351.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/alpha-core-192.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32-v351.png" />
     <script>
       try {
         const savedTheme = localStorage.getItem("alpha-platform-theme");
         const theme = savedTheme === "light" ? "light" : "dark";
+        const savedLanguage = localStorage.getItem("alpha-core-language");
+        const language = savedLanguage === "ar" ? "ar" : "en";
         document.documentElement.dataset.theme = theme;
+        document.documentElement.dataset.language = language;
+        document.documentElement.lang = language;
+        document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
         document.documentElement.style.colorScheme = theme;
+        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#071b14" : "#f7fbf4");
       } catch (_) {}
     </script>
     <meta name="description" content="ALPHA PLATFORM — high-tech Egyptian equity intelligence, portfolio performance, market news and stock recommendations." />

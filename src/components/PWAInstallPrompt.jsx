@@ -50,7 +50,7 @@ export default function PWAInstallPrompt() {
   return (
     <aside className="pwa-install-prompt" role="dialog" aria-label={isArabic ? "تثبيت تطبيق ألفا" : "Install ALPHA app"}>
       <button className="pwa-install-close" type="button" onClick={dismiss} aria-label={isArabic ? "إغلاق" : "Close"}><X size={18}/></button>
-      <img src="/icons/icon-192.png" alt=""/>
+      <img src="/icons/alpha-core-192.png" alt=""/>
       <div>
         <strong>{isArabic ? "ثبّت ALPHA على هاتفك" : "Install ALPHA on your phone"}</strong>
         <p>{isIOS ? (isArabic ? "اضغط مشاركة ثم إضافة إلى الشاشة الرئيسية." : "Tap Share, then Add to Home Screen.") : (isArabic ? "وصول أسرع وتجربة كاملة بدون واجهة المتصفح." : "Faster access with a full-screen, app-like experience.")}</p>

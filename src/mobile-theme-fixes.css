@@ -1,0 +1,439 @@
+/* ========================================================================== */
+/* ALPHA PLATFORM V3.5.1 — mobile PWA icon, theme contrast and RTL hotfix      */
+/* Imported after mobile-pwa.css. Layout, routes, charts and data stay intact. */
+/* ========================================================================== */
+
+@media (max-width: 767px) {
+  :root,
+  [data-theme="dark"] {
+    --mobile-ink: #f3faf6;
+    --mobile-ink-2: #c7d8cf;
+    --mobile-muted: #8ea59a;
+    --mobile-paper: #061510;
+    --mobile-card: #0c2119;
+    --mobile-card-soft: #10281f;
+    --mobile-line: #254438;
+    --mobile-nav: #071b14;
+    --mobile-nav-soft: #102920;
+    --mobile-accent: #4cff62;
+    --mobile-blue: #103238;
+    --mobile-positive: #2ee6a6;
+    --mobile-negative: #ff667d;
+    --mobile-control: #122b21;
+    --mobile-control-hover: #173629;
+    --mobile-input: #0a2018;
+    --mobile-metric-top: #10353a;
+    --mobile-metric-bottom: #0c2119;
+    --mobile-thesis: #0d291d;
+    --mobile-thesis-line: #27583c;
+    --mobile-table-even: #0f281f;
+    --mobile-footer: #091d16;
+    --mobile-hero-bg: linear-gradient(145deg, #10283a, #091b29);
+    --mobile-menu-bg: #081e17;
+    --mobile-menu-item: #102b21;
+    --mobile-menu-subitem: #0c251c;
+    --mobile-menu-text: #f2faf5;
+    --mobile-shadow: 0 12px 36px rgba(0, 0, 0, .28);
+  }
+
+  [data-theme="light"] {
+    --mobile-ink: #0a1d13;
+    --mobile-ink-2: #394a40;
+    --mobile-muted: #68776e;
+    --mobile-paper: #f7fbf4;
+    --mobile-card: #ffffff;
+    --mobile-card-soft: #f4f7f3;
+    --mobile-line: #d7e2d9;
+    --mobile-nav: #071b14;
+    --mobile-nav-soft: #102920;
+    --mobile-accent: #37e957;
+    --mobile-blue: #d7f7fb;
+    --mobile-positive: #169c48;
+    --mobile-negative: #d94450;
+    --mobile-control: #f1f4f1;
+    --mobile-control-hover: #e9efea;
+    --mobile-input: #ffffff;
+    --mobile-metric-top: #d7f7fb;
+    --mobile-metric-bottom: #ffffff;
+    --mobile-thesis: #f7fcf7;
+    --mobile-thesis-line: #c9e6d0;
+    --mobile-table-even: #f7f9f6;
+    --mobile-footer: #edf3ed;
+    --mobile-hero-bg: linear-gradient(145deg, #ffffff, #eef6f1);
+    --mobile-menu-bg: #071b14;
+    --mobile-menu-item: #102920;
+    --mobile-menu-subitem: #0d241c;
+    --mobile-menu-text: #f2faf5;
+    --mobile-shadow: 0 8px 24px rgba(18, 45, 29, .10);
+  }
+
+  html,
+  body,
+  #root,
+  .public-page,
+  .dashboard-shell,
+  .creator-shell-v33 {
+    background: var(--mobile-paper) !important;
+    color: var(--mobile-ink) !important;
+  }
+
+  .dashboard-shell > main,
+  .public-page > main,
+  .creator-shell-v33 .publishing-studio-v33,
+  .admin-settings-page-v31,
+  .admin-support-page-v31,
+  .price-import-page-v34 {
+    color: var(--mobile-ink) !important;
+  }
+
+  /* Dynamic card surfaces — no forced white cards in dark mode. */
+  .panel-v21,
+  .kpi-card,
+  .kpi-card-v21,
+  .portfolio-card-v32,
+  .research-card-v3,
+  .news-card-v32,
+  .weekly-card-v3,
+  .holding-card-v3,
+  .latest-intelligence-card-v3,
+  .recent-activity-v3,
+  .analyst-section-v32,
+  .article-body-v32,
+  .article-side-card-v32,
+  .admin-summary-v21,
+  .settings-section-v31,
+  .profile-card-v21,
+  .profile-card-v33,
+  .smart-holding-card-v343,
+  .factsheet-hero-v3,
+  .guidance-v21,
+  .admin-page-hero-v31,
+  .team-hero-v33,
+  .creator-command-v33,
+  .executive-topbar-v3,
+  .portfolio-index-toolbar-v32,
+  .market-news-widget-v32,
+  .market-intelligence-v32 {
+    border-color: var(--mobile-line) !important;
+    background: var(--mobile-card) !important;
+    color: var(--mobile-ink) !important;
+    box-shadow: var(--mobile-shadow) !important;
+  }
+
+  .panel-v21 h1,
+  .panel-v21 h2,
+  .panel-v21 h3,
+  .portfolio-card-v32 h1,
+  .portfolio-card-v32 h2,
+  .portfolio-card-v32 h3,
+  .latest-intelligence-card-v3 h1,
+  .latest-intelligence-card-v3 h2,
+  .latest-intelligence-card-v3 h3,
+  .recent-activity-v3 h1,
+  .recent-activity-v3 h2,
+  .recent-activity-v3 h3,
+  .factsheet-hero-v3 h1,
+  .factsheet-hero-v3 h2,
+  .factsheet-hero-v3 h3 {
+    color: var(--mobile-ink) !important;
+  }
+
+  .panel-heading-v21,
+  .panel-heading-v21 p,
+  .overview-copy-v3 p,
+  .chart-footnote-v3,
+  .muted-copy-v21 {
+    border-color: var(--mobile-line) !important;
+    color: var(--mobile-muted) !important;
+  }
+
+  /* Dashboard status banner keeps the exact geometry, but follows the theme. */
+  .portfolio-hero-metrics-v343 {
+    border-color: var(--mobile-line) !important;
+    background: linear-gradient(180deg, var(--mobile-metric-top) 0 39%, var(--mobile-metric-bottom) 39% 100%) !important;
+    box-shadow: 5px 6px 0 var(--mobile-nav) !important;
+  }
+
+  .portfolio-hero-metric-v343 {
+    border-color: var(--mobile-line) !important;
+    color: var(--mobile-ink) !important;
+  }
+
+  .portfolio-hero-metric-v343 span,
+  .portfolio-hero-metric-v343 small {
+    color: var(--mobile-muted) !important;
+  }
+
+  .portfolio-hero-metric-v343 b {
+    color: var(--mobile-ink) !important;
+  }
+
+  .portfolio-hero-metric-v343 b.positive,
+  .portfolio-hero-metric-v343 .positive {
+    color: var(--mobile-positive) !important;
+  }
+
+  .portfolio-hero-metric-v343 b.negative,
+  .portfolio-hero-metric-v343 .negative {
+    color: var(--mobile-negative) !important;
+  }
+
+  .portfolio-hero-metric-v343 b.benchmark-positive {
+    color: #8b5cf6 !important;
+  }
+
+  /* Portfolio index hero: readable in both themes. */
+  .portfolios-index-hero-v32 {
+    border-color: var(--mobile-line) !important;
+    background: var(--mobile-hero-bg) !important;
+    color: var(--mobile-ink) !important;
+    box-shadow: var(--mobile-shadow) !important;
+  }
+
+  .portfolios-hero-copy-v32 h1,
+  .portfolios-hero-copy-v32 > p,
+  .portfolio-hero-stats-v32 b {
+    color: var(--mobile-ink) !important;
+  }
+
+  .portfolios-hero-copy-v32 > p,
+  .portfolio-hero-stats-v32 small {
+    color: var(--mobile-muted) !important;
+  }
+
+  .portfolio-hero-stats-v32 > span {
+    border-color: var(--mobile-line) !important;
+    background: var(--mobile-card-soft) !important;
+  }
+
+  [data-theme="dark"] .portfolios-index-hero-v32 .market-graphic-v33 {
+    color: var(--mobile-ink) !important;
+  }
+
+  /* Buttons, filters and fields inherit the active theme. */
+  .button,
+  .theme-toggle,
+  .language-toggle,
+  .range-switch,
+  .ideas-filter-v23,
+  .research-controls-v3,
+  .news-controls-v32,
+  .recommendation-tabs-v3 {
+    border-color: var(--mobile-line) !important;
+    background: var(--mobile-control) !important;
+    color: var(--mobile-ink) !important;
+  }
+
+  .button.subtle,
+  .button.ghost {
+    background: var(--mobile-control) !important;
+    color: var(--mobile-ink) !important;
+  }
+
+  .button:hover,
+  .theme-toggle:hover,
+  .language-toggle:hover {
+    background: var(--mobile-control-hover) !important;
+    color: var(--mobile-ink) !important;
+  }
+
+  input,
+  select,
+  textarea,
+  [data-theme="light"] input,
+  [data-theme="light"] select,
+  [data-theme="light"] textarea,
+  [data-theme="dark"] input,
+  [data-theme="dark"] select,
+  [data-theme="dark"] textarea {
+    border-color: var(--mobile-line) !important;
+    background: var(--mobile-input) !important;
+    color: var(--mobile-ink) !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--mobile-muted) !important;
+  }
+
+  .range-switch button,
+  .ideas-filter-v23 button,
+  .research-controls-v3 button,
+  .news-controls-v32 button,
+  .recommendation-tabs-v3 button {
+    color: var(--mobile-muted) !important;
+  }
+
+  .range-switch button.active,
+  .ideas-filter-v23 button.active,
+  .research-controls-v3 button.active,
+  .news-controls-v32 button.active,
+  .recommendation-tabs-v3 button.active {
+    background: var(--mobile-nav) !important;
+    color: var(--mobile-accent) !important;
+  }
+
+  /* Holding cards and tables retain all content with readable surfaces. */
+  .smart-holding-prices-v343,
+  .smart-impact-row-v343 > span {
+    border-color: var(--mobile-line) !important;
+    background: var(--mobile-card-soft) !important;
+    color: var(--mobile-ink) !important;
+  }
+
+  .smart-thesis-v343 {
+    border-color: var(--mobile-thesis-line) !important;
+    background: var(--mobile-thesis) !important;
+  }
+
+  .smart-thesis-v343 p,
+  .smart-holding-card-v343 header p,
+  .smart-holding-prices-v343 small,
+  .smart-impact-row-v343 small,
+  .smart-thesis-v343 small {
+    color: var(--mobile-muted) !important;
+  }
+
+  .smart-weight-v343,
+  .smart-holding-prices-v343 b,
+  .smart-impact-row-v343 b {
+    color: var(--mobile-ink) !important;
+  }
+
+  .data-table-v21 tbody td {
+    border-color: var(--mobile-line) !important;
+    background: var(--mobile-card) !important;
+    color: var(--mobile-ink) !important;
+  }
+
+  .data-table-v21 tbody tr:nth-child(even) td {
+    background: var(--mobile-table-even) !important;
+  }
+
+  .table-scroll {
+    border-color: var(--mobile-line) !important;
+    background: var(--mobile-card) !important;
+  }
+
+  .platform-footer-v3,
+  .public-footer {
+    background: var(--mobile-footer) !important;
+    color: var(--mobile-ink) !important;
+  }
+
+  /* Mobile menu: opaque, uncluttered, and both controls are fully clickable. */
+  .platform-nav,
+  .v34-nav,
+  [data-theme="light"] .platform-nav.open,
+  [data-theme="dark"] .platform-nav.open {
+    border-color: var(--mobile-line) !important;
+    background: var(--mobile-menu-bg) !important;
+    color: var(--mobile-menu-text) !important;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, .42) !important;
+    backdrop-filter: blur(24px) saturate(125%) !important;
+    isolation: isolate;
+  }
+
+  .platform-nav > a,
+  .platform-nav > .header-menu-v34 > summary {
+    border: 1px solid transparent !important;
+    background: var(--mobile-menu-item) !important;
+    color: var(--mobile-menu-text) !important;
+  }
+
+  .platform-nav .header-menu-panel-v34 {
+    border: 1px solid rgba(255, 255, 255, .06) !important;
+    background: var(--mobile-menu-subitem) !important;
+  }
+
+  .platform-nav .header-menu-panel-v34 a,
+  .platform-nav .header-menu-panel-v34 button {
+    color: #d9e9df !important;
+  }
+
+  .platform-nav .header-menu-panel-v34 a:hover,
+  .platform-nav .header-menu-panel-v34 a.active,
+  .platform-nav .header-menu-panel-v34 button:hover {
+    background: rgba(76, 255, 98, .09) !important;
+    color: #ffffff !important;
+  }
+
+  .mobile-nav-actions {
+    border-color: rgba(255, 255, 255, .10) !important;
+  }
+
+  .mobile-tools-row-v34 {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .platform-header .mobile-tools-row-v34 .theme-toggle,
+  .platform-header .mobile-tools-row-v34 .language-toggle {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 48px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 10px 12px !important;
+    border: 1px solid rgba(255, 255, 255, .12) !important;
+    border-radius: 10px !important;
+    background: #143126 !important;
+    color: #ffffff !important;
+    font-size: 13px !important;
+    font-weight: 850 !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    opacity: 1 !important;
+  }
+
+  .platform-header .mobile-tools-row-v34 .theme-toggle span,
+  .platform-header .mobile-tools-row-v34 .language-toggle span {
+    display: inline !important;
+    color: inherit !important;
+    white-space: nowrap !important;
+  }
+
+  .platform-header .mobile-tools-row-v34 .theme-toggle:active,
+  .platform-header .mobile-tools-row-v34 .language-toggle:active {
+    transform: scale(.97) !important;
+    background: #1a3b2e !important;
+  }
+
+  .mobile-nav-actions .button {
+    border-color: rgba(255, 255, 255, .11) !important;
+    background: #122b21 !important;
+    color: #ffffff !important;
+  }
+
+  .mobile-nav-actions .button.danger {
+    border-color: rgba(255, 102, 125, .30) !important;
+    background: rgba(255, 102, 125, .10) !important;
+    color: #ffafbb !important;
+  }
+
+  /* RTL is driven by LanguageContext on the HTML element. */
+  [dir="rtl"] .platform-nav > a,
+  [dir="rtl"] .platform-nav > .header-menu-v34 > summary,
+  [dir="rtl"] .platform-nav .header-menu-panel-v34 a,
+  [dir="rtl"] .platform-nav .header-menu-panel-v34 button,
+  [dir="rtl"] .mobile-nav-actions .button {
+    text-align: right !important;
+  }
+
+  [dir="rtl"] .portfolio-visual-heading-v343,
+  [dir="rtl"] .panel-heading-v21,
+  [dir="rtl"] .overview-copy-v3,
+  [dir="rtl"] .portfolios-hero-copy-v32,
+  [dir="rtl"] .portfolio-index-toolbar-v32 {
+    text-align: right !important;
+  }
+
+  [dir="rtl"] .mobile-bottom-nav,
+  [dir="rtl"] .mobile-tools-row-v34 {
+    direction: rtl;
+  }
+}

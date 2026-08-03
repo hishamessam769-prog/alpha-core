@@ -8,6 +8,7 @@ import { SettingsProvider } from "./context/SettingsContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import "./styles.css";
 import "./mobile-pwa.css";
+import "./mobile-theme-fixes.css";
 import { registerAlphaServiceWorker } from "./lib/pwa";
 
 ReactDOM.createRoot(document.getElementById("root")).render(

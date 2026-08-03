@@ -130,8 +130,12 @@ export function LanguageProvider({ children }) {
 
   useEffect(() => {
     localStorage.setItem("alpha-core-language", language);
+    const direction = language === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = language;
-    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+    document.documentElement.dir = direction;
+    document.documentElement.dataset.language = language;
+    document.body?.setAttribute("dir", direction);
+    document.body?.setAttribute("data-language", language);
   }, [language]);
 
   const value = useMemo(() => ({
