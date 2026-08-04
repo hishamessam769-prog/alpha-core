@@ -6,6 +6,7 @@ import GlobalSearch from "./GlobalSearch";
 import HeaderMenu from "./HeaderMenu";
 import LanguageToggle from "./LanguageToggle";
 import ThemeToggle from "./ThemeToggle";
+import NotificationBadge from "./NotificationBadge";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { canAccessAdmin, canAccessCreatorStudio, hasAnyPermission, hasPermission, roleLabel, workspaceRoute } from "../lib/access";
@@ -70,6 +71,7 @@ export default function DashboardHeader({ admin = false }) {
 
       <div className="header-actions dashboard-actions v34-header-actions">
         <GlobalSearch compact />
+        <NotificationBadge compact />
         <ThemeToggle compact />
         <HeaderMenu label={profile?.full_name || profile?.email || (isArabic ? "حسابي" : "Account")} icon={UserRound} align="end" className="account-menu-v34">
           <div className="account-summary-v34"><span className="profile-avatar"><UserRound size={15}/></span><div><b>{profile?.full_name || profile?.email}</b><small>{roleLabel(profile).toUpperCase()}</small></div></div>

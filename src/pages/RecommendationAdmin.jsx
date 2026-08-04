@@ -34,6 +34,7 @@ const blankRecommendation = () => ({
   valuation: "",
   is_published: false,
   is_demo: false,
+  send_push_notification: true,
 });
 
 export default function RecommendationAdmin() {
@@ -142,6 +143,7 @@ export default function RecommendationAdmin() {
         valuation: form.valuation || "",
         is_published: Boolean(publish),
         is_demo: Boolean(form.is_demo),
+        send_push_notification: Boolean(form.send_push_notification),
         updated_at: new Date().toISOString(),
       };
       let id = form.id;
@@ -162,7 +164,7 @@ export default function RecommendationAdmin() {
         setImageUploading(false);
       }
       setMessage(publish ? (isArabic ? "تم نشر التوصية المستقلة للأعضاء" : "Independent recommendation published to members.") : (isArabic ? "تم حفظ المسودة" : "Draft saved."));
-      if (publish) void dispatchQueuedPushNotifications();
+      if (publish && form.send_push_notification) void dispatchQueuedPushNotifications();
       await load(id);
     } catch (error) {
       setMessage(error.message);
@@ -244,10 +246,12 @@ export default function RecommendationAdmin() {
       title: newUpdate.title.trim(),
       body: newUpdate.body.trim(),
       created_by: profile.id,
+      send_push_notification: Boolean(form.send_push_notification),
     });
     if (error) return setMessage(error.message);
     setNewUpdate({ update_date: today(), title: "", body: "" });
     setMessage(isArabic ? "تم إضافة التحديث لسجل الشركة" : "Update added to the company timeline.");
+    if (form.send_push_notification) void dispatchQueuedPushNotifications();
     await loadUpdates(form.id);
   };
 
@@ -283,6 +287,7 @@ export default function RecommendationAdmin() {
           <header className="admin-top-v21">
             <div><span className="eyebrow">INDEPENDENT IDEA</span><h1>{form.ticker || (isArabic ? "توصية جديدة" : "New recommendation")}</h1><p>{isArabic ? "قرار حالي واضح مع مستهدف واحد خلال 12 شهر وأداء مقابل EGX30 Capped وسجل تحديثات." : "A clear current action, one 12-month target, EGX30 Capped performance and a permanent update log."}</p></div>
             <div className="admin-actions-v21">
+              <label className="check-label-v22 notification-publish-toggle-v37"><input type="checkbox" checked={Boolean(form.send_push_notification)} onChange={(e) => setForm({ ...form, send_push_notification: e.target.checked })}/>{isArabic ? "إرسال إشعار عند النشر" : "Notify subscribers"}</label>
               {isSuperAdmin && form.id && <button className="button danger" onClick={deleteRecommendation} title={isArabic ? "حذف التوصية بالكامل" : "Delete full recommendation"}><Trash2 size={15}/></button>}
               <button className="button subtle" disabled={saving || imageUploading} onClick={() => save({ publish: false, status: form.status === "draft" ? "draft" : form.status })}><Save size={16}/>{isArabic ? "حفظ مسودة" : "Save draft"}</button>
               <button className="button gold" disabled={saving || imageUploading} onClick={() => save({ publish: true, status: form.status === "draft" ? "open" : form.status })}><Send size={16}/>{isArabic ? "نشر التوصية" : "Publish"}</button>

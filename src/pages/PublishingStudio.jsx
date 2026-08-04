@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { deriveRole, hasPermission, roleLabel } from "../lib/access";
 import { supabase } from "../lib/supabase";
+import { dispatchQueuedPushNotifications } from "../lib/pushNotifications";
 
 const isoDate = () => new Date().toISOString().slice(0, 10);
 const slugify = (value) => String(value || "article").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64) || `article-${Date.now()}`;
@@ -18,6 +19,7 @@ const emptyForm = () => ({
   watchNext: "",
   imageUrl: "",
   videoUrl: "",
+  sendPushNotification: true,
 });
 
 export default function PublishingStudio({ embedded = false }) {
@@ -118,6 +120,7 @@ export default function PublishingStudio({ embedded = false }) {
       is_published: Boolean(isPublished),
       published_at: isPublished ? new Date().toISOString() : null,
       is_demo: false,
+      send_push_notification: Boolean(form.sendPushNotification),
       updated_at: new Date().toISOString(),
     };
     const result = editingId
@@ -136,6 +139,7 @@ export default function PublishingStudio({ embedded = false }) {
     setEditingId("");
     setEditingSlug("");
     setForm(emptyForm());
+    if (isPublished && form.sendPushNotification) void dispatchQueuedPushNotifications();
     await loadArticles();
     window.dispatchEvent(new CustomEvent("alpha:meaningful-action", { detail: { action: isPublished ? "publish_article" : "save_article_draft" } }));
   };
@@ -171,7 +175,7 @@ export default function PublishingStudio({ embedded = false }) {
             <label><span><PlayCircle/>{isArabic ? "رابط فيديو" : "Video URL"}</span><input type="url" value={form.videoUrl} disabled={!canPublishArticle} onChange={(event) => setForm({ ...form, videoUrl: event.target.value })} placeholder="YouTube, Vimeo or MP4"/></label>
             <label className="wide">{isArabic ? "ما يجب مراقبته لاحقًا" : "What to watch next"}<textarea rows="4" value={form.watchNext} disabled={!canPublishArticle} onChange={(event) => setForm({ ...form, watchNext: event.target.value })} placeholder={isArabic ? "حدث أو أكثر، كل حدث في سطر" : "One event per line"}/></label>
           </div>
-          <footer>{editingId && <button className="button ghost" type="button" disabled={saving} onClick={beginNew}><Plus/>{isArabic ? "مادة جديدة" : "New article"}</button>}<button className="button subtle" type="button" disabled={!canPublishArticle || saving} onClick={() => publish(false)}><Save/>{isArabic ? "حفظ مسودة" : "Save draft"}</button><button className="button primary" type="button" disabled={!canPublishArticle || saving} onClick={() => publish(true)}><Send/>{isArabic ? "نشر الآن" : "Publish now"}</button></footer>
+          <footer><label className="check-label-v22 notification-publish-toggle-v37"><input type="checkbox" checked={Boolean(form.sendPushNotification)} onChange={(event) => setForm({ ...form, sendPushNotification: event.target.checked })}/>{isArabic ? "إرسال إشعار عند النشر" : "Notify subscribers"}</label>{editingId && <button className="button ghost" type="button" disabled={saving} onClick={beginNew}><Plus/>{isArabic ? "مادة جديدة" : "New article"}</button>}<button className="button subtle" type="button" disabled={!canPublishArticle || saving} onClick={() => publish(false)}><Save/>{isArabic ? "حفظ مسودة" : "Save draft"}</button><button className="button primary" type="button" disabled={!canPublishArticle || saving} onClick={() => publish(true)}><Send/>{isArabic ? "نشر الآن" : "Publish now"}</button></footer>
           {message && <div className={`form-message ${publishedId ? "success" : ""}`}>{publishedId ? <CheckCircle2/> : null}<span>{message}</span>{publishedId && <Link to={`/news/report/${publishedId}`}>{isArabic ? "فتح المادة" : "Open article"}<ArrowRight/></Link>}</div>}
         </article>
 

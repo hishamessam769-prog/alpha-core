@@ -4,6 +4,7 @@ import DashboardHeader from "../components/DashboardHeader";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
+import { dispatchQueuedPushNotifications } from "../lib/pushNotifications";
 import { dateTimeLabel } from "../lib/calculations";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -35,6 +36,7 @@ const blankReport = () => ({
   is_published: false,
   published_at: null,
   is_demo: false,
+  send_push_notification: true,
 });
 
 export default function WeeklyReportsAdmin() {
@@ -88,6 +90,7 @@ export default function WeeklyReportsAdmin() {
       is_published: Boolean(publish),
       published_at: publish ? (form.published_at || new Date().toISOString()) : null,
       is_demo: Boolean(form.is_demo),
+      send_push_notification: Boolean(form.send_push_notification),
       updated_at: new Date().toISOString(),
     };
     let id = form.id;

@@ -1,4 +1,4 @@
-import { Headphones, Home, Lightbulb, LogIn, Newspaper, PenSquare, Settings, UserRound, WalletCards } from "lucide-react";
+import { Bell, Headphones, Home, Lightbulb, LogIn, Newspaper, PenSquare, Settings, UserRound, WalletCards } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
@@ -38,7 +38,7 @@ export default function MobileBottomNav() {
       { to: "/portfolios", label: isArabic ? "المحافظ" : "Portfolios", icon: WalletCards },
       { to: "/recommendations", label: isArabic ? "التوصيات" : "Calls", icon: Lightbulb },
       { to: "/news", label: isArabic ? "المحتوى" : "News", icon: Newspaper },
-      { to: "/profile", label: isArabic ? "حسابي" : "Profile", icon: UserRound },
+      { to: "/notifications", label: isArabic ? "التنبيهات" : "Alerts", icon: Bell },
     ];
   } else {
     items = [

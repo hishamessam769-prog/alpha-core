@@ -22,6 +22,7 @@ import AnalystProfile from "./pages/AnalystProfile";
 import AdminTeam from "./pages/AdminTeam";
 import PublishingStudio from "./pages/PublishingStudio";
 import AdminNotifications from "./pages/AdminNotifications";
+import NotificationInbox from "./pages/NotificationInbox";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SupportWidget from "./components/SupportWidget";
 import SmartSurvey from "./components/SmartSurvey";
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="/news/:kind/:id" element={<ProtectedRoute><NewsArticle /></ProtectedRoute>} />
         <Route path="/analysts/:id" element={<ProtectedRoute><AnalystProfile /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><NotificationInbox /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute adminOnly permission="manage_portfolios"><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/recommendations" element={<ProtectedRoute adminOnly permission="manage_recommendations"><RecommendationAdmin /></ProtectedRoute>} />
         <Route path="/admin/weekly-reports" element={<ProtectedRoute adminOnly permission="manage_reports"><WeeklyReportsAdmin /></ProtectedRoute>} />

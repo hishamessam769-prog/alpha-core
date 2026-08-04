@@ -39,6 +39,7 @@ const makeMonth = (portfolioId, benchmarkTicker = "EGX30CAP") => ({
   is_demo: false,
   is_published: false,
   is_closed: false,
+  send_push_notification: true,
   final_portfolio_return: null,
   final_benchmark_return: null,
   holdings: Array.from({ length: 5 }, (_, index) => makeHolding(index)),
@@ -58,6 +59,7 @@ const blankPortfolio = () => ({
   status: "live",
   is_published: true,
   is_demo: false,
+  send_push_notification: true,
 });
 
 export default function AdminDashboard() {
@@ -157,6 +159,7 @@ export default function AdminDashboard() {
       status: portfolioForm.status,
       is_published: Boolean(portfolioForm.is_published),
       is_demo: Boolean(portfolioForm.is_demo),
+      send_push_notification: Boolean(portfolioForm.send_push_notification),
       updated_at: new Date().toISOString(),
     };
     let id = portfolioForm.id;
@@ -170,6 +173,7 @@ export default function AdminDashboard() {
     }
     setShowPortfolioForm(false);
     setMessage(isArabic ? "تم حفظ المحفظة" : "Portfolio saved.");
+    if (portfolioForm.is_published && portfolioForm.send_push_notification) void dispatchQueuedPushNotifications();
     await loadData({ preferredPortfolioId: id });
   };
 
@@ -226,6 +230,7 @@ export default function AdminDashboard() {
         current_investor_guidance: form.current_investor_guidance || form.investor_guidance,
         new_investor_guidance: form.new_investor_guidance || form.investor_guidance,
         is_demo: Boolean(form.is_demo),
+        send_push_notification: Boolean(form.send_push_notification),
         is_published: Boolean(publish || close),
         is_closed: Boolean(close || form.is_closed),
         final_portfolio_return: close ? Number(metrics.portfolioReturn.toFixed(8)) : form.final_portfolio_return,
@@ -288,7 +293,7 @@ export default function AdminDashboard() {
         : publish
           ? (isArabic ? "تم نشر التحديث للأعضاء" : "Update published to members.")
           : (isArabic ? "تم حفظ المسودة" : "Draft saved privately."));
-      if (publish || close) void dispatchQueuedPushNotifications();
+      if ((publish || close) && form.send_push_notification) void dispatchQueuedPushNotifications();
       await loadData({ preferredPortfolioId: form.portfolio_id, preferredMonthId: monthId });
     } catch (error) {
       setMessage(error.message);
@@ -373,6 +378,7 @@ export default function AdminDashboard() {
           <header className="admin-top-v21">
             <div><span className="eyebrow">{t("adminCentre")}</span><h1>{currentPortfolio ? (isArabic && currentPortfolio.name_ar ? currentPortfolio.name_ar : currentPortfolio.name) : (isArabic ? "المحافظ" : "Portfolios")}</h1><p>{form.id ? monthLabel(form.month_key, false, locale) : (isArabic ? "شهر جديد" : "New month")}</p></div>
             <div className="admin-actions-v21">
+              <label className="check-label-v22 notification-publish-toggle-v37"><input type="checkbox" checked={Boolean(form.send_push_notification)} onChange={(e) => setForm({ ...form, send_push_notification: e.target.checked })}/>{isArabic ? "إرسال إشعار" : "Notify subscribers"}</label>
               {isSuperAdmin && form.id && <button className="button danger" onClick={deleteMonth} title={isArabic ? "حذف الشهر نهائيًا" : "Permanently delete month"}><Trash2 size={15}/></button>}
               <button className="button subtle" disabled={!form?.holdings?.length} onClick={() => setReportOpen(true)}><FileText size={16}/>Generate Portfolio Report</button>
               <button className="button subtle" disabled={saving || !selectedPortfolioId} onClick={() => persistMonth({ publish: false })}><Save size={16}/>{t("saveDraft")}</button>
@@ -394,7 +400,7 @@ export default function AdminDashboard() {
               <label>{isArabic ? "الحالة" : "Status"}<select value={portfolioForm.status} onChange={(e) => setPortfolioForm({ ...portfolioForm, status: e.target.value })}><option value="draft">Draft</option><option value="live">Live</option><option value="closed">Closed</option></select></label>
               <label className="wide">{isArabic ? "الوصف بالإنجليزي" : "Description"}<textarea rows="3" value={portfolioForm.description || ""} onChange={(e) => setPortfolioForm({ ...portfolioForm, description: e.target.value })}/></label>
               <label className="wide">{isArabic ? "الوصف بالعربي" : "Arabic description"}<textarea rows="3" value={portfolioForm.description_ar || ""} onChange={(e) => setPortfolioForm({ ...portfolioForm, description_ar: e.target.value })}/></label>
-              <label className="check-label-v22"><input type="checkbox" checked={Boolean(portfolioForm.is_published)} onChange={(e) => setPortfolioForm({ ...portfolioForm, is_published: e.target.checked })}/>{isArabic ? "إظهار المحفظة للأعضاء" : "Publish portfolio to members"}</label><label className="check-label-v22"><input type="checkbox" checked={Boolean(portfolioForm.is_demo)} onChange={(e) => setPortfolioForm({ ...portfolioForm, is_demo: e.target.checked })}/>{isArabic ? "تمييز كبيانات تجريبية" : "Mark as demo data"}</label>
+              <label className="check-label-v22"><input type="checkbox" checked={Boolean(portfolioForm.is_published)} onChange={(e) => setPortfolioForm({ ...portfolioForm, is_published: e.target.checked })}/>{isArabic ? "إظهار المحفظة للأعضاء" : "Publish portfolio to members"}</label><label className="check-label-v22"><input type="checkbox" checked={Boolean(portfolioForm.send_push_notification)} onChange={(e) => setPortfolioForm({ ...portfolioForm, send_push_notification: e.target.checked })}/>{isArabic ? "إشعار عند إطلاق المحفظة" : "Notify on launch"}</label><label className="check-label-v22"><input type="checkbox" checked={Boolean(portfolioForm.is_demo)} onChange={(e) => setPortfolioForm({ ...portfolioForm, is_demo: e.target.checked })}/>{isArabic ? "تمييز كبيانات تجريبية" : "Mark as demo data"}</label>
             </div>
             <div className="editor-buttons-v22"><button className="button gold" onClick={savePortfolio}><Save size={15}/>{isArabic ? "حفظ المحفظة" : "Save portfolio"}</button>{isSuperAdmin && portfolioForm.id && <button className="button danger" onClick={deletePortfolio}><Trash2 size={15}/>{isArabic ? "حذف المحفظة بالكامل" : "Delete full portfolio"}</button>}</div>
           </section>}

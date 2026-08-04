@@ -124,6 +124,11 @@ export default async function handler(request, response) {
       }
     }
 
+    const deliveredUsers = [...new Set(subscriptions.map((item) => item.user_id).filter(Boolean))];
+    if (deliveredUsers.length) {
+      await service.from("user_notification_inbox").update({ delivered_at: new Date().toISOString() }).eq("event_id", event.id).in("user_id", deliveredUsers);
+    }
+
     const failedCompletely = subscriptions.length > 0 && successCount === 0;
     await service
       .from("notification_events")
@@ -170,6 +175,10 @@ export default async function handler(request, response) {
         .select("*")
         .single();
       if (insertError) throw insertError;
+      const inboxUsers = [...new Set(subscriptions.map((item) => item.user_id).filter(Boolean))];
+      if (inboxUsers.length) {
+        await service.from("user_notification_inbox").upsert(inboxUsers.map((userId) => ({ user_id: userId, event_id: event.id })), { onConflict: "user_id,event_id" });
+      }
       const result = await deliverEvent(event, subscriptions);
       return response.status(200).json({ processed: 1, audience, subscriptions: subscriptions.length, success: result.successCount, failed: result.failureCount, eventId: event.id });
     }
@@ -198,12 +207,38 @@ export default async function handler(request, response) {
 
     let totalSuccess = 0;
     let totalFailure = 0;
-    for (const event of events) {
-      const audience = event.payload?.audience === "self" ? "self" : "all";
-      const targetUserId = audience === "self" ? event.payload?.target_user_id || null : null;
+    const broadcastEvents = events.filter((event) => event.payload?.audience !== "self");
+    const selfEvents = events.filter((event) => event.payload?.audience === "self");
+
+    if (broadcastEvents.length > 1) {
+      const subscriptions = await getSubscriptions("all", null);
+      const digestEvent = {
+        id: broadcastEvents[0].id,
+        event_type: "notification_digest",
+        title: `ALPHA has ${broadcastEvents.length} new updates`,
+        body: "New portfolio, recommendation or market updates are waiting for you.",
+        target_url: "/notifications",
+        dedupe_key: `digest-${new Date().toISOString().slice(0, 13)}`,
+        payload: { digest: true, event_ids: broadcastEvents.map((item) => item.id) },
+      };
+      const result = await deliverEvent(digestEvent, subscriptions);
+      totalSuccess += result.successCount;
+      totalFailure += result.failureCount;
+      await service.from("notification_events").update({ status: result.successCount ? "sent" : "failed", processed_at: new Date().toISOString(), recipient_count: subscriptions.length, success_count: result.successCount, failure_count: result.failureCount, payload: { digest: true } }).in("id", broadcastEvents.map((item) => item.id));
+    } else if (broadcastEvents.length === 1) {
+      const event = broadcastEvents[0];
+      await service.from("notification_events").update({ status: "processing", attempts: Number(event.attempts || 0) + 1, last_error: null }).eq("id", event.id);
+      const subscriptions = await getSubscriptions("all", null);
+      const result = await deliverEvent(event, subscriptions);
+      totalSuccess += result.successCount;
+      totalFailure += result.failureCount;
+    }
+
+    for (const event of selfEvents) {
+      const targetUserId = event.payload?.target_user_id || null;
       await service.from("notification_events").update({ status: "processing", attempts: Number(event.attempts || 0) + 1, last_error: null }).eq("id", event.id);
       try {
-        const subscriptions = await getSubscriptions(audience, targetUserId);
+        const subscriptions = await getSubscriptions("self", targetUserId);
         const result = await deliverEvent(event, subscriptions);
         totalSuccess += result.successCount;
         totalFailure += result.failureCount;
@@ -213,7 +248,7 @@ export default async function handler(request, response) {
       }
     }
 
-    return response.status(200).json({ processed: events.length, success: totalSuccess, failed: totalFailure });
+    return response.status(200).json({ processed: events.length, success: totalSuccess, failed: totalFailure, digested: broadcastEvents.length > 1 });
   } catch (error) {
     return response.status(500).json({ error: error instanceof Error ? error.message : String(error) });
   }
