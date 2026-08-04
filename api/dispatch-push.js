@@ -212,14 +212,18 @@ export default async function handler(request, response) {
 
     if (broadcastEvents.length > 1) {
       const subscriptions = await getSubscriptions("all", null);
+      const firstEvent = broadcastEvents[0];
+      const extraCount = Math.max(0, broadcastEvents.length - 1);
       const digestEvent = {
-        id: broadcastEvents[0].id,
+        id: firstEvent.id,
         event_type: "notification_digest",
-        title: `ALPHA has ${broadcastEvents.length} new updates`,
-        body: "New portfolio, recommendation or market updates are waiting for you.",
-        target_url: "/notifications",
+        title: firstEvent.title || `ALPHA has ${broadcastEvents.length} new updates`,
+        body: extraCount
+          ? `${firstEvent.body || "Open the latest update."} +${extraCount} more update${extraCount === 1 ? "" : "s"} in your inbox.`
+          : (firstEvent.body || "Open the latest update."),
+        target_url: firstEvent.target_url || "/notifications",
         dedupe_key: `digest-${new Date().toISOString().slice(0, 13)}`,
-        payload: { digest: true, event_ids: broadcastEvents.map((item) => item.id) },
+        payload: { digest: true, event_ids: broadcastEvents.map((item) => item.id), first_target_url: firstEvent.target_url || "/notifications" },
       };
       const result = await deliverEvent(digestEvent, subscriptions);
       totalSuccess += result.successCount;

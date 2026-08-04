@@ -108,8 +108,12 @@ export default function IdeasHub() {
                 <div className="research-card-top-v22"><span className={`action-pill-v23 ${action}`}>{recommendationActionLabel(action, isArabic)}</span><span className={`status-pill small ${metrics.isOpen ? "live" : "final"}`}>{recommendationStatusLabel(item.status, isArabic)}</span></div>
                 <div className="research-company-v22"><div><h3>{item.company_name}</h3><p>{item.title}</p></div></div>
                 <div className="potential-hero-v23"><span><small>{isArabic ? "المتبقي للمستهدف" : "Remaining upside"}</small><b className={metrics.upsideToTarget >= 0 ? "positive" : "negative"}>{formatPercent(metrics.upsideToTarget)}</b></span><Target size={24}/></div>
+                <div className="recommendation-card-snapshot-v371">
+                  <span><small>{isArabic ? "صدرت منذ" : "Issued"}</small><b><Clock3 size={14}/>{isArabic ? `منذ ${metrics.durationDays} يوم` : `${metrics.durationDays} day${metrics.durationDays === 1 ? "" : "s"} ago`}</b></span>
+                  <span><small>{isArabic ? "العائد حتى الآن" : "Return so far"}</small><b className={metrics.returnPct >= 0 ? "positive" : "negative"}>{formatPercent(metrics.returnPct)}</b></span>
+                </div>
                 <div className="research-card-metrics-v22"><Metric label={isArabic ? "دخول" : "Entry"} value={formatNumber(item.entry_price, 2, locale)}/><Metric label={isArabic ? "حالي" : "Current"} value={formatNumber(metrics.currentPrice, 2, locale)}/><Metric label={isArabic ? "مستهدف" : "Target"} value={formatNumber(item.target_price, 2, locale)}/></div>
-                <div className="research-return-strip-v22"><span><small>{isArabic ? "العائد" : "Return"}</small><b className={metrics.returnPct >= 0 ? "positive" : "negative"}>{formatPercent(metrics.returnPct)}</b></span><span><small>EGX30</small><b className={metrics.benchmarkReturn >= 0 ? "gold-text" : "negative"}>{formatPercent(metrics.benchmarkReturn)}</b></span><span><small>Alpha</small><b className={metrics.alpha >= 0 ? "positive" : "negative"}>{formatPercent(metrics.alpha)}</b></span></div>
+                <div className="research-return-strip-v22 compact-v371"><span><small>EGX30</small><b className={metrics.benchmarkReturn >= 0 ? "gold-text" : "negative"}>{formatPercent(metrics.benchmarkReturn)}</b></span><span><small>Alpha</small><b className={metrics.alpha >= 0 ? "positive" : "negative"}>{formatPercent(metrics.alpha)}</b></span></div>
                 <footer className="research-card-author-footer-v32"><AuthorAttribution profile={profiles[item.created_by]} authorId={item.created_by} compact/><b>{isArabic ? "عرض" : "Open"}<ArrowUpRight size={14}/></b></footer>
               </Link>;
             })}
