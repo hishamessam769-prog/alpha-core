@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 
 export const PUSH_DISMISS_KEY = "alpha-push-prompt-dismissed-at";
+export const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || "BHzTwKq3huCAPgezSnUZsf6UAcI49H1BKqvmM-X8x9LM2PoUIK1wBf1-MmyXZz_osrwIc6V_dSWsMCgg6CM6my0";
 
 export function isWebPushSupported() {
   return typeof window !== "undefined"
@@ -10,7 +11,7 @@ export function isWebPushSupported() {
 }
 
 export function isPushConfigured() {
-  return Boolean(import.meta.env.VITE_VAPID_PUBLIC_KEY);
+  return Boolean(VAPID_PUBLIC_KEY);
 }
 
 function urlBase64ToUint8Array(base64String) {
@@ -39,7 +40,7 @@ export async function subscribeUserToPush(userId) {
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY),
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
   }
 
@@ -69,15 +70,48 @@ export async function unsubscribeUserFromPush() {
   await subscription.unsubscribe();
 }
 
-export async function dispatchQueuedPushNotifications() {
+async function invokePushDispatcher(body) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  if (!token) throw new Error("Authentication required.");
+  const response = await fetch("/api/dispatch-push", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  let data = {};
+  try { data = await response.json(); } catch { data = {}; }
+  if (!response.ok || data?.error) throw new Error(data?.error || `Push service request failed (${response.status}).`);
+  return data;
+}
+
+export async function getPushServiceStatus() {
   try {
-    const { data, error } = await supabase.functions.invoke("dispatch-push", {
-      body: { source: "admin-publish" },
-    });
-    if (error) throw error;
-    return data;
+    return await invokePushDispatcher({ action: "status" });
   } catch (error) {
-    console.warn("Push dispatch did not complete", error);
-    return null;
+    return { configured: false, error: error.message || String(error) };
   }
+}
+
+export async function sendManualPushNotification({ title, body, targetUrl = "/dashboard", eventType = "platform_update", audience = "all" }) {
+  return invokePushDispatcher({
+    action: "send_manual",
+    title,
+    body,
+    targetUrl,
+    eventType,
+    audience,
+  });
+}
+
+export async function retryPushNotification(eventId) {
+  if (!eventId) throw new Error("Notification event is required.");
+  return invokePushDispatcher({ action: "retry_event", eventId });
+}
+
+export async function dispatchQueuedPushNotifications() {
+  return invokePushDispatcher({ action: "dispatch_pending", source: "admin-publish" });
 }

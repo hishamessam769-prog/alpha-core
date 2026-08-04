@@ -21,6 +21,7 @@ import NewsArticle from "./pages/NewsArticle";
 import AnalystProfile from "./pages/AnalystProfile";
 import AdminTeam from "./pages/AdminTeam";
 import PublishingStudio from "./pages/PublishingStudio";
+import AdminNotifications from "./pages/AdminNotifications";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SupportWidget from "./components/SupportWidget";
 import SmartSurvey from "./components/SmartSurvey";
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="/admin/settings" element={<ProtectedRoute adminOnly permission="manage_settings"><AdminSettings /></ProtectedRoute>} />
         <Route path="/admin/team" element={<ProtectedRoute superAdminOnly><AdminTeam /></ProtectedRoute>} />
         <Route path="/admin/publishing" element={<ProtectedRoute adminOnly anyPermission={["publish_articles", "manage_reports", "manage_recommendations", "manage_portfolios"]}><PublishingStudio /></ProtectedRoute>} />
+        <Route path="/admin/notifications" element={<ProtectedRoute superAdminOnly><AdminNotifications /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {showMemberExperience && <><SupportWidget/><SmartSurvey/></>}

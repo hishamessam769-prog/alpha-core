@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, BriefcaseBusiness, Eye, FileText, History, Mail, Plus, Save, Send, ShieldAlert, Trash2, Users, X } from "lucide-react";
+import { BarChart3, BellRing, BriefcaseBusiness, Eye, FileText, History, Mail, Plus, Save, Send, ShieldAlert, Trash2, Users, X } from "lucide-react";
 import DashboardHeader from "../components/DashboardHeader";
 import PortfolioReportStudio from "../components/PortfolioReportStudio";
 import { useAuth } from "../context/AuthContext";
@@ -366,6 +366,7 @@ export default function AdminDashboard() {
             ))}
           </nav>
           <a className="button subtle full" href="/dashboard"><Eye size={16}/>{t("viewMember")}</a>
+          {isSuperAdmin && <a className="button subtle full" href="/admin/notifications"><BellRing size={16}/>{isArabic ? "مركز الإشعارات" : "Notification Center"}</a>}
         </aside>
 
         <main className="admin-content-v21">

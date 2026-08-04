@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BarChart3, BookOpen, FileSpreadsheet, Headphones, LayoutDashboard, Lightbulb, LogOut, Menu, MoreHorizontal, Newspaper, PenSquare, Settings, UserRound, UsersRound, WalletCards, X } from "lucide-react";
+import { BarChart3, BellRing, BookOpen, FileSpreadsheet, Headphones, LayoutDashboard, Lightbulb, LogOut, Menu, MoreHorizontal, Newspaper, PenSquare, Settings, UserRound, UsersRound, WalletCards, X } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import Brand from "./Brand";
 import GlobalSearch from "./GlobalSearch";
@@ -33,6 +33,7 @@ export default function DashboardHeader({ admin = false }) {
     { to: "/admin/weekly-reports", label: isArabic ? "إدارة التقارير" : "Manage research reports", icon: BookOpen, show: hasPermission(profile, "manage_reports") },
     { to: "/admin/prices", label: isArabic ? "تحديث الأسعار" : "Price data", icon: FileSpreadsheet, show: hasAnyPermission(profile, ["manage_portfolios", "manage_recommendations"]) },
     { to: "/admin/support", label: isArabic ? "صندوق الدعم" : "Support inbox", icon: Headphones, show: hasPermission(profile, "support_inbox") },
+    { to: "/admin/notifications", label: isArabic ? "مركز الإشعارات" : "Notifications", icon: BellRing, show: profile?.is_super_admin },
     { to: "/admin/team", label: isArabic ? "الفريق والصلاحيات" : "Team & access", icon: UsersRound, show: profile?.is_super_admin },
     { to: "/admin/settings", label: isArabic ? "إعدادات المنصة" : "Platform settings", icon: Settings, show: hasPermission(profile, "manage_settings") },
   ].filter((item) => item.show);

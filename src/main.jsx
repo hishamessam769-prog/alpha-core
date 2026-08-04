@@ -11,6 +11,7 @@ import "./mobile-pwa.css";
 import "./mobile-theme-fixes.css";
 import "./mobile-v36-polish.css";
 import "./push-notifications.css";
+import "./notification-center.css";
 import { registerAlphaServiceWorker } from "./lib/pwa";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
