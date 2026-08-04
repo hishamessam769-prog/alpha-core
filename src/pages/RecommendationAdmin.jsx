@@ -7,6 +7,7 @@ import { dateTimeLabel, formatNumber, formatPercent } from "../lib/calculations"
 import { recommendationActionLabel, recommendationMetrics, recommendationStatusLabel } from "../lib/recommendations";
 import { persistRecommendationImage, splitRecommendationUpdates, uploadRecommendationImage, validateRecommendationImage } from "../lib/recommendationMedia";
 import { supabase } from "../lib/supabase";
+import { dispatchQueuedPushNotifications } from "../lib/pushNotifications";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -161,6 +162,7 @@ export default function RecommendationAdmin() {
         setImageUploading(false);
       }
       setMessage(publish ? (isArabic ? "تم نشر التوصية المستقلة للأعضاء" : "Independent recommendation published to members.") : (isArabic ? "تم حفظ المسودة" : "Draft saved."));
+      if (publish) void dispatchQueuedPushNotifications();
       await load(id);
     } catch (error) {
       setMessage(error.message);

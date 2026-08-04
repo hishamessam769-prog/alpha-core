@@ -42,6 +42,7 @@ async function loadPublishedData() {
   const optional = await Promise.allSettled([
     supabase.from("recommendation_updates").select("*").order("update_date", { ascending: false }).limit(50),
     supabase.from("profiles").select("*"),
+    supabase.from("portfolio_peak_alpha").select("*"),
   ]);
   return {
     portfolios: portfolioResult.data || [],
@@ -51,6 +52,7 @@ async function loadPublishedData() {
     priceRows: priceResult.data || [],
     updates: optional[0].status === "fulfilled" ? (optional[0].value.data || []).filter((item) => item.title !== RECOMMENDATION_IMAGE_TITLE).slice(0, 12) : [],
     profiles: optional[1].status === "fulfilled" ? optional[1].value.data || [] : [],
+    peaks: optional[2]?.status === "fulfilled" ? optional[2].value.data || [] : [],
   };
 }
 
@@ -65,6 +67,7 @@ export default function MemberDashboard() {
   const [reports, setReports] = useState([]);
   const [updates, setUpdates] = useState([]);
   const [profiles, setProfiles] = useState([]);
+  const [portfolioPeaks, setPortfolioPeaks] = useState({});
   const [prices, setPrices] = useState({});
   const [selectedPortfolioId, setSelectedPortfolioId] = useState("");
   const [selectedKey, setSelectedKey] = useState("");
@@ -84,6 +87,7 @@ export default function MemberDashboard() {
       setReports(data.reports);
       setUpdates(data.updates || []);
       setProfiles(data.profiles || []);
+      setPortfolioPeaks(Object.fromEntries((data.peaks || []).map((row) => [row.portfolio_id, row])));
       setPrices(Object.fromEntries(data.priceRows.map((row) => [String(row.ticker).toUpperCase(), row])));
       setSelectedPortfolioId((current) => {
         const requestedPortfolio = slug ? data.portfolios.find((item) => item.slug === slug) : null;
@@ -112,6 +116,7 @@ export default function MemberDashboard() {
       .on("postgres_changes", { event: "*", schema: "public", table: "weekly_reports" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "recommendation_updates" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "portfolio_peak_alpha" }, refresh)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
@@ -133,6 +138,13 @@ export default function MemberDashboard() {
   const worstHolding = [...(metrics.rows || [])].sort((a, b) => Number(a.mtd || 0) - Number(b.mtd || 0))[0];
   const portfolioTitle = isArabic && currentPortfolio?.name_ar ? currentPortfolio.name_ar : currentPortfolio?.name;
   const portfolioAuthor = profiles.find((item) => item.id === currentPortfolio?.created_by) || null;
+  const calculatedPeak = useMemo(() => trackRecord.reduce((best, row) => {
+    if (!best || Number(row.cumulativeAlpha) > Number(best.cumulativeAlpha)) return row;
+    return best;
+  }, null), [trackRecord]);
+  const backendPeak = portfolioPeaks[currentPortfolio?.id] || null;
+  const peakAlpha = Number(backendPeak?.peak_alpha ?? calculatedPeak?.cumulativeAlpha ?? 0);
+  const peakAlphaDate = backendPeak?.achieved_at || calculatedPeak?.updatedAt || null;
 
   const changePortfolio = (id) => {
     setSelectedPortfolioId(id);
@@ -245,6 +257,11 @@ export default function MemberDashboard() {
               <span>{isArabic ? "الألفا التاريخية" : "Historical cumulative Alpha"}</span>
               <b className={Number(latestCumulative.cumulativeAlpha || 0) >= 0 ? "positive" : "negative"}>{formatPercent(latestCumulative.cumulativeAlpha)}</b>
               <small>{isArabic ? "منذ الإطلاق" : "Since launch"}</small>
+            </div>
+            <div className="portfolio-hero-metric-v343 peak">
+              <span>{isArabic ? "أعلى ألفا تاريخية" : "Highest historical Alpha"}</span>
+              <b>{formatPercent(peakAlpha)}</b>
+              <small>{peakAlphaDate ? (isArabic ? `تحققت في ${dateTimeLabel(peakAlphaDate, locale)}` : `Achieved on ${dateTimeLabel(peakAlphaDate, locale)}`) : (isArabic ? "يبدأ التسجيل بعد أول تحديث" : "Tracking starts with the first update")}</small>
             </div>
             <div className="portfolio-hero-metric-v343 benchmark">
               <span>{selected.benchmark_ticker || currentPortfolio?.benchmark_ticker || "EGX30CAP"}</span>

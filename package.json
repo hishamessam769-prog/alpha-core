@@ -1,7 +1,7 @@
 {
-  "name": "alpha-platform-v3-5-1-pwa",
+  "name": "alpha-platform-v3-6-0-pwa-push",
   "private": true,
-  "version": "3.5.1",
+  "version": "3.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

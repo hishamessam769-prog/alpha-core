@@ -5,6 +5,7 @@ import DashboardHeader from "../components/DashboardHeader";
 import { useLanguage } from "../context/LanguageContext";
 import { formatNumber } from "../lib/calculations";
 import { supabase } from "../lib/supabase";
+import { dispatchQueuedPushNotifications } from "../lib/pushNotifications";
 
 const aliases = {
   ticker: ["ticker", "symbol", "code", "اسم السهم", "رمز السهم", "الرمز"],
@@ -186,6 +187,9 @@ export default function PriceImportAdmin() {
       if (historyError) throw historyError;
       const { data: applied, error: applyError } = await supabase.rpc("apply_latest_market_prices");
       if (applyError) throw applyError;
+      const { error: queueError } = await supabase.rpc("queue_daily_performance_notifications");
+      if (queueError) console.warn("Daily push queue was not created", queueError);
+      void dispatchQueuedPushNotifications();
 
       setResult({ ...(applied || {}), unique_tickers: uniqueValidRows.length, duplicate_rows_ignored: duplicateRows });
       setMessage(isArabic ? "تم التحديث بنجاح. تم تطبيق كل رمز مرة واحدة على جميع المحافظ والتوصيات المفتوحة التي تستخدمه." : "Update completed. Each ticker was applied once across every open portfolio and recommendation that references it.");

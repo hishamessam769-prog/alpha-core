@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
 import { calculateMonth, dateTimeLabel, formatPercent, monthLabel } from "../lib/calculations";
+import { dispatchQueuedPushNotifications } from "../lib/pushNotifications";
 
 const makeHolding = (index) => ({
   local_id: crypto.randomUUID(),
@@ -287,6 +288,7 @@ export default function AdminDashboard() {
         : publish
           ? (isArabic ? "تم نشر التحديث للأعضاء" : "Update published to members.")
           : (isArabic ? "تم حفظ المسودة" : "Draft saved privately."));
+      if (publish || close) void dispatchQueuedPushNotifications();
       await loadData({ preferredPortfolioId: form.portfolio_id, preferredMonthId: monthId });
     } catch (error) {
       setMessage(error.message);

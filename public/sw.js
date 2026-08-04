@@ -1,4 +1,4 @@
-const VERSION = "alpha-pwa-v3.5.1";
+const VERSION = "alpha-pwa-v3.6.0";
 const STATIC_CACHE = `${VERSION}-static`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const OFFLINE_URL = "/offline.html";
@@ -6,7 +6,7 @@ const PRECACHE = [
   "/",
   "/index.html",
   OFFLINE_URL,
-  "/manifest.json?v=3.5.1",
+  "/manifest.json?v=3.6.0",
   "/icons/alpha-core-192.png",
   "/icons/alpha-core-512.png",
   "/icons/alpha-core-maskable-512.png",
@@ -74,4 +74,39 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
+
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try { payload = event.data?.json() || {}; } catch { payload = { body: event.data?.text() || "A new ALPHA CORE update is available." }; }
+  const title = payload.title || "ALPHA CORE";
+  const options = {
+    body: payload.body || "A new update is available.",
+    icon: "/icons/alpha-core-192.png",
+    badge: "/icons/favicon-32-v351.png",
+    tag: payload.tag || `alpha-${Date.now()}`,
+    renotify: true,
+    vibrate: [90, 45, 90],
+    data: { url: payload.url || "/dashboard", eventType: payload.eventType, ...payload.data },
+    actions: [{ action: "open", title: "Open update" }],
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = new URL(event.notification.data?.url || "/dashboard", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (clients) => {
+      for (const client of clients) {
+        if (client.url.startsWith(self.location.origin) && "focus" in client) {
+          await client.focus();
+          if ("navigate" in client) await client.navigate(targetUrl);
+          return;
+        }
+      }
+      return self.clients.openWindow ? self.clients.openWindow(targetUrl) : undefined;
+    })
+  );
 });

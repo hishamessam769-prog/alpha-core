@@ -18,7 +18,7 @@ export function ThemeProvider({ children }) {
     window.localStorage.setItem(STORAGE_KEY, theme);
     const mobileApp = window.matchMedia?.("(max-width: 767px)").matches || window.matchMedia?.("(display-mode: standalone)").matches;
     const themeColor = mobileApp
-      ? (theme === "dark" ? "#071b14" : "#f7fbf4")
+      ? (theme === "dark" ? "#08131f" : "#f4f8fc")
       : (theme === "dark" ? "#0b0f14" : "#f3f5f7");
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColor);
   }, [theme]);

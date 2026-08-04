@@ -1713,3 +1713,15 @@ img{height:auto}
 @media print{
   .exclude-from-export,[data-export-exclude="true"]{display:none!important}
 }
+
+/* ========================================================================== */
+/* V3.6 — Peak Alpha metric. Data/calculation logic remains in existing flow. */
+/* ========================================================================== */
+.portfolio-hero-metrics-v343{grid-template-columns:repeat(5,minmax(0,1fr))}
+.portfolio-hero-metric-v343.peak{--metric-accent:#8b7cff;background:linear-gradient(145deg,rgba(53,230,255,.035),rgba(139,124,255,.065))}
+.portfolio-hero-metric-v343.peak:after{content:"";position:absolute;bottom:0;left:24%;width:52%;height:1px;background:linear-gradient(90deg,transparent,var(--metric-accent),transparent);opacity:.8}
+.portfolio-hero-metric-v343.peak b{color:#9a8cff;text-shadow:0 0 24px rgba(139,124,255,.22)}
+[data-theme="light"] .portfolio-hero-metric-v343.peak{background:linear-gradient(145deg,rgba(53,180,220,.055),rgba(139,124,255,.06))}
+@media(max-width:1180px){.portfolio-hero-metrics-v343{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.portfolio-hero-metrics-v343{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.portfolio-hero-metrics-v343{grid-template-columns:1fr}}
