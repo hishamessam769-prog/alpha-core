@@ -1,7 +1,7 @@
 {
-  "name": "alpha-platform-v3-8-home-analytics",
+  "name": "alpha-platform-v3-8-1-executive-report",
   "private": true,
-  "version": "3.8.0",
+  "version": "3.8.1",
   "type": "module",
   "scripts": {
     "dev": "vite",

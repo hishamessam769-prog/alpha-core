@@ -11,6 +11,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import DashboardHeader from "../components/DashboardHeader";
+import PlatformExecutiveReportExport from "../components/PlatformExecutiveReportExport";
 import { useLanguage } from "../context/LanguageContext";
 import { dateTimeLabel, formatNumber } from "../lib/calculations";
 import { supabase } from "../lib/supabase";
@@ -91,7 +92,7 @@ export default function AdminAnalytics() {
       <main className="admin-analytics-v38">
         <section className="admin-analytics-hero-v38">
           <div><span className="eyebrow">SUPER ADMIN · PRIVATE ANALYTICS</span><h1>{isArabic ? "لوحة المستخدمين والتحليلات" : "Users & growth analytics"}</h1><p>{isArabic ? "صفحة خاصة بالـSuper Admin فقط لمتابعة التسجيلات والنشاط والجلسات وتصدير العملاء المحتملين." : "A private Super Admin view for signups, visitor activity, sessions and lead export."}</p></div>
-          <div className="admin-analytics-hero-actions-v38"><span><ShieldCheck/>{isArabic ? "محمي بصلاحية Super Admin" : "Super Admin protected"}</span><button className="button subtle" onClick={load} disabled={loading}><RefreshCw className={loading ? "spin" : ""}/>{isArabic ? "تحديث" : "Refresh"}</button></div>
+          <div className="admin-analytics-hero-actions-v38"><span><ShieldCheck/>{isArabic ? "محمي بصلاحية Super Admin" : "Super Admin protected"}</span><PlatformExecutiveReportExport onMessage={setMessage}/><button className="button subtle" onClick={load} disabled={loading}><RefreshCw className={loading ? "spin" : ""}/>{isArabic ? "تحديث" : "Refresh"}</button></div>
         </section>
 
         <section className="analytics-window-switch-v38">
