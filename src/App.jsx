@@ -1,8 +1,10 @@
-import { Navigate, Route, Routes, useParams } from "react-router-dom";
+import { useEffect } from "react";
+import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import MemberDashboard from "./pages/MemberDashboard";
+import HomePortal from "./pages/HomePortal";
 import Methodology from "./pages/Methodology";
 import AdminDashboard from "./pages/AdminDashboard";
 import RecommendationAdmin from "./pages/RecommendationAdmin";
@@ -22,6 +24,7 @@ import AnalystProfile from "./pages/AnalystProfile";
 import AdminTeam from "./pages/AdminTeam";
 import PublishingStudio from "./pages/PublishingStudio";
 import AdminNotifications from "./pages/AdminNotifications";
+import AdminAnalytics from "./pages/AdminAnalytics";
 import NotificationInbox from "./pages/NotificationInbox";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SupportWidget from "./components/SupportWidget";
@@ -30,6 +33,7 @@ import MobileBottomNav from "./components/MobileBottomNav";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import PushNotificationPrompt from "./components/PushNotificationPrompt";
 import { useAuth } from "./context/AuthContext";
+import { supabase } from "./lib/supabase";
 
 export default function App() {
   const { session, profile } = useAuth();
@@ -42,7 +46,7 @@ export default function App() {
         <Route path="/methodology" element={<Methodology />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<ProtectedRoute><MemberDashboard /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><HomePortal /></ProtectedRoute>} />
         <Route path="/portfolios" element={<ProtectedRoute><PortfoliosIndex /></ProtectedRoute>} />
         <Route path="/portfolio/:slug" element={<ProtectedRoute><MemberDashboard /></ProtectedRoute>} />
         <Route path="/recommendations" element={<ProtectedRoute><IdeasHub /></ProtectedRoute>} />
@@ -67,11 +71,12 @@ export default function App() {
         <Route path="/admin/team" element={<ProtectedRoute superAdminOnly><AdminTeam /></ProtectedRoute>} />
         <Route path="/admin/publishing" element={<ProtectedRoute adminOnly anyPermission={["publish_articles", "manage_reports", "manage_recommendations", "manage_portfolios"]}><PublishingStudio /></ProtectedRoute>} />
         <Route path="/admin/notifications" element={<ProtectedRoute superAdminOnly><AdminNotifications /></ProtectedRoute>} />
+        <Route path="/admin/analytics" element={<ProtectedRoute superAdminOnly><AdminAnalytics /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {showMemberExperience && <><SupportWidget/><SmartSurvey/></>}
       <MobileBottomNav/>
-      {session && <PushNotificationPrompt/>}
+      {session && <><PushNotificationPrompt/><AnalyticsSessionTracker/></>}
       <PWAInstallPrompt/>
     </>
   );
@@ -80,4 +85,64 @@ export default function App() {
 function RecommendationRedirect() {
   const { id } = useParams();
   return <Navigate to={`/recommendations/${id}`} replace />;
+}
+
+
+function AnalyticsSessionTracker() {
+  const { session } = useAuth();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!session?.user?.id || !supabase) return undefined;
+
+    const storageKey = `alpha-analytics-session-${session.user.id}`;
+    let sessionToken = window.sessionStorage.getItem(storageKey);
+    if (!sessionToken) {
+      sessionToken = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      window.sessionStorage.setItem(storageKey, sessionToken);
+    }
+
+    const deviceType = window.matchMedia?.("(max-width: 767px)").matches ? "mobile" : "desktop";
+    let lastTouch = 0;
+    let stopped = false;
+
+    const touch = async (force = false) => {
+      const now = Date.now();
+      if (stopped || (!force && now - lastTouch < 30000)) return;
+      lastTouch = now;
+      try {
+        await supabase.rpc("touch_app_session", {
+          p_session_token: sessionToken,
+          p_path: window.location.pathname,
+          p_device_type: deviceType,
+          p_user_agent: window.navigator.userAgent,
+        });
+      } catch {
+        // Analytics is deliberately non-blocking. The app stays fully usable
+        // even before the additive V3.8 SQL migration is installed.
+      }
+    };
+
+    touch(true);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") touch();
+    }, 60000);
+    const onActivity = () => touch();
+    const onVisibility = () => touch(true);
+    window.addEventListener("pointerdown", onActivity, { passive: true });
+    window.addEventListener("keydown", onActivity);
+    window.addEventListener("touchstart", onActivity, { passive: true });
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+      window.removeEventListener("pointerdown", onActivity);
+      window.removeEventListener("keydown", onActivity);
+      window.removeEventListener("touchstart", onActivity);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [session?.user?.id, location.pathname]);
+
+  return null;
 }
