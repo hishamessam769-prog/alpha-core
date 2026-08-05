@@ -7,6 +7,7 @@ import AuthorAttribution from "../components/AuthorAttribution";
 import Brand from "../components/Brand";
 import DashboardHeader from "../components/DashboardHeader";
 import InsightDrawer from "../components/InsightDrawer";
+import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { usePlatformSettings } from "../context/SettingsContext";
 import { supabase } from "../lib/supabase";
@@ -14,9 +15,11 @@ import { dateTimeLabel } from "../lib/calculations";
 
 export default function WeeklyReportDetail() {
   const { slug } = useParams();
+  const { profile } = useAuth();
   const { isArabic } = useLanguage();
   const { settings } = usePlatformSettings();
   const locale = isArabic ? "ar-EG" : "en-GB";
+  const isSuperAdmin = Boolean(profile?.is_super_admin);
   const BackIcon = isArabic ? ArrowRight : ArrowLeft;
   const reportRef = useRef(null);
   const [report, setReport] = useState(null);
@@ -40,7 +43,7 @@ export default function WeeklyReportDetail() {
   }, [slug]);
 
   const exportPdf = async () => {
-    if (!reportRef.current || exporting) return;
+    if (!isSuperAdmin || !reportRef.current || exporting) return;
     setExporting(true);
     try {
       const canvas = await html2canvas(reportRef.current, { scale: 1.8, backgroundColor: "#07131f", useCORS: true, logging: false, windowWidth: 1400 });
@@ -70,7 +73,7 @@ export default function WeeklyReportDetail() {
       <DashboardHeader />
       {message && <div className="notice-bar">{message}</div>}
       <main ref={reportRef} className="weekly-detail-v23 weekly-detail-v3">
-        <div className="weekly-detail-toolbar-v3" data-html2canvas-ignore="true"><Link className="back-link" to="/weekly-reports"><BackIcon size={15}/>{isArabic ? "كل التقارير" : "All reports"}</Link><div><InsightDrawer label={isArabic ? "اشرح التقرير" : "Explain this report"} title={isArabic ? "ملخص التقرير الأسبوعي" : "Weekly report brief"} summary={aiSummary}/><button className="button gold" type="button" onClick={exportPdf} disabled={exporting}><Download size={15}/>{exporting ? (isArabic ? "جاري التجهيز" : "Preparing") : "PDF"}</button></div></div>
+        <div className="weekly-detail-toolbar-v3" data-html2canvas-ignore="true"><Link className="back-link" to="/weekly-reports"><BackIcon size={15}/>{isArabic ? "كل التقارير" : "All reports"}</Link><div><InsightDrawer label={isArabic ? "اشرح التقرير" : "Explain this report"} title={isArabic ? "ملخص التقرير الأسبوعي" : "Weekly report brief"} summary={aiSummary}/>{isSuperAdmin && <button className="button gold" type="button" onClick={exportPdf} disabled={exporting}><Download size={15}/>{exporting ? (isArabic ? "جاري التجهيز" : "Preparing") : "PDF"}</button>}</div></div>
 
         <div className="pdf-brand-strip-v31"><Brand staticMode/><span><small>{isArabic ? "تقرير أسبوعي منشور" : "PUBLISHED WEEKLY REPORT"}</small><b>{dateTimeLabel(report.updated_at || report.published_at, locale)}</b></span></div>
 

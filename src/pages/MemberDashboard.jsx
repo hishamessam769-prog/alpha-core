@@ -11,6 +11,7 @@ import InsightDrawer from "../components/InsightDrawer";
 import MarketNewsWidget from "../components/MarketNewsWidget";
 import PerformanceChart from "../components/PerformanceChart";
 import PortfolioVisualSuite from "../components/PortfolioVisualSuite";
+import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { supabase } from "../lib/supabase";
 import {
@@ -58,9 +59,11 @@ async function loadPublishedData() {
 
 export default function MemberDashboard() {
   const reportRef = useRef(null);
+  const { profile } = useAuth();
   const { slug } = useParams();
   const { t, isArabic } = useLanguage();
   const locale = isArabic ? "ar-EG" : "en-GB";
+  const isSuperAdmin = Boolean(profile?.is_super_admin);
   const [portfolios, setPortfolios] = useState([]);
   const [allMonths, setAllMonths] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
@@ -169,7 +172,7 @@ export default function MemberDashboard() {
   };
 
   const exportPdf = async () => {
-    if (!reportRef.current || exporting) return;
+    if (!isSuperAdmin || !reportRef.current || exporting) return;
     setExporting(true);
     setMessage(isArabic ? "جاري تجهيز التقرير…" : "Preparing your report…");
     try {
@@ -238,7 +241,7 @@ export default function MemberDashboard() {
             <div className="overview-actions-v3" data-html2canvas-ignore="true">
               <InsightDrawer label={isArabic ? "اشرح الأداء" : "Explain performance"} title={isArabic ? "ملخص أداء المحفظة" : "Portfolio performance brief"} summary={aiSummary}/>
               <button className="button subtle" onClick={copyDirectLink}><span className="copy-link-icon-v31">{linkCopied ? <Check size={15}/> : <Link2 size={15}/>}</span>{linkCopied ? (isArabic ? "تم النسخ" : "Copied") : (isArabic ? "نسخ الرابط المباشر" : "Copy direct link")}</button>
-              <button className="button gold" onClick={exportPdf} disabled={exporting}><Download size={15}/>{exporting ? t("loading") : t("exportPdf")}</button>
+              {isSuperAdmin && <button className="button gold" onClick={exportPdf} disabled={exporting}><Download size={15}/>{exporting ? t("loading") : t("exportPdf")}</button>}
             </div>
           </section>
 

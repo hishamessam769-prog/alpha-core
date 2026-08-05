@@ -380,7 +380,7 @@ export default function AdminDashboard() {
             <div className="admin-actions-v21">
               <label className="check-label-v22 notification-publish-toggle-v37"><input type="checkbox" checked={Boolean(form.send_push_notification)} onChange={(e) => setForm({ ...form, send_push_notification: e.target.checked })}/>{isArabic ? "إرسال إشعار" : "Notify subscribers"}</label>
               {isSuperAdmin && form.id && <button className="button danger" onClick={deleteMonth} title={isArabic ? "حذف الشهر نهائيًا" : "Permanently delete month"}><Trash2 size={15}/></button>}
-              <button className="button subtle" disabled={!form?.holdings?.length} onClick={() => setReportOpen(true)}><FileText size={16}/>Generate Portfolio Report</button>
+              {isSuperAdmin && <button className="button subtle" disabled={!form?.holdings?.length} onClick={() => setReportOpen(true)}><FileText size={16}/>Generate Portfolio Report</button>}
               <button className="button subtle" disabled={saving || !selectedPortfolioId} onClick={() => persistMonth({ publish: false })}><Save size={16}/>{t("saveDraft")}</button>
               <button className="button gold" disabled={saving || !selectedPortfolioId} onClick={() => persistMonth({ publish: true })}><Send size={16}/>{t("publishUpdate")}</button>
               <button className="button green" disabled={saving || form.is_closed || !selectedPortfolioId} onClick={() => persistMonth({ publish: true, close: true })}>{t("closeMonth")}</button>
@@ -508,7 +508,7 @@ export default function AdminDashboard() {
           </section>
         </main>
       </div>
-      <PortfolioReportStudio open={reportOpen} onClose={() => setReportOpen(false)} portfolio={currentPortfolio} month={form} months={portfolioMonths} isArabic={isArabic} locale={locale} onMessage={setMessage}/>
+      {isSuperAdmin && <PortfolioReportStudio open={reportOpen} onClose={() => setReportOpen(false)} portfolio={currentPortfolio} month={form} months={portfolioMonths} isArabic={isArabic} locale={locale} onMessage={setMessage}/>}
     </div>
   );
 }

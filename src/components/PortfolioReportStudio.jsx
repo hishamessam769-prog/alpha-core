@@ -5,9 +5,11 @@ import jsPDF from "jspdf";
 import { buildAiSummary, buildPortfolioReport, buildSocialCopy, safeFilePart } from "../lib/reporting";
 import { dateTimeLabel, formatNumber, formatPercent } from "../lib/calculations";
 import { createZipBlob, downloadBlob } from "../lib/zip";
+import { useAuth } from "../context/AuthContext";
 import { usePlatformSettings } from "../context/SettingsContext";
 
 export default function PortfolioReportStudio({ open, onClose, portfolio, month, months, isArabic, locale, onMessage }) {
+  const { profile } = useAuth();
   const { settings } = usePlatformSettings();
   const [reportType, setReportType] = useState("monthly");
   const [activeText, setActiveText] = useState("ai");
@@ -17,7 +19,9 @@ export default function PortfolioReportStudio({ open, onClose, portfolio, month,
   const aiSummary = useMemo(() => report ? buildAiSummary(report, isArabic, locale) : "", [report, isArabic, locale]);
   const socialCopy = useMemo(() => report ? buildSocialCopy(report, isArabic) : "", [report, isArabic]);
 
-  if (!open || !report) return null;
+  const isSuperAdmin = Boolean(profile?.is_super_admin);
+
+  if (!isSuperAdmin || !open || !report) return null;
 
   const fileBase = `${safeFilePart(report.portfolioName)}-${month.month_key}-${reportType}`;
 
@@ -106,6 +110,7 @@ export default function PortfolioReportStudio({ open, onClose, portfolio, month,
   };
 
   const exportPdf = async () => {
+    if (!isSuperAdmin) return;
     setWorking(true);
     try {
       const blob = await createPdfBlob();
@@ -119,6 +124,7 @@ export default function PortfolioReportStudio({ open, onClose, portfolio, month,
   };
 
   const exportImage = async () => {
+    if (!isSuperAdmin) return;
     setWorking(true);
     try {
       const blob = await createImageBlob();
@@ -141,6 +147,7 @@ export default function PortfolioReportStudio({ open, onClose, portfolio, month,
   };
 
   const createMarketingPackage = async () => {
+    if (!isSuperAdmin) return;
     setWorking(true);
     try {
       const pdfBlob = await createPdfBlob();
