@@ -19,6 +19,7 @@ import { Link } from "react-router-dom";
 import AuthorAttribution from "../components/AuthorAttribution";
 import CompanyMark from "../components/CompanyMark";
 import DashboardHeader from "../components/DashboardHeader";
+import FinancialFreedomSimulator from "../components/FinancialFreedomSimulator";
 import Reveal from "../components/Reveal";
 import { useLanguage } from "../context/LanguageContext";
 import {
@@ -130,6 +131,7 @@ export default function HomePortal() {
               <Link className="button primary" to="/portfolios"><WalletCards size={16}/>{isArabic ? "استعراض المحافظ" : "Explore portfolios"}</Link>
               <Link className="button subtle" to="/recommendations"><TrendingUp size={16}/>{isArabic ? "متابعة التوصيات" : "Track recommendations"}</Link>
               <Link className="button subtle" to="/advisor"><BrainCircuit size={16}/>{isArabic ? "ابنِ توزيعك الاستثماري" : "Build my allocation"}</Link>
+              <a className="button subtle" href="#financial-freedom-planner"><Target size={16}/>{isArabic ? "خطط لحريتك المالية" : "Plan financial freedom"}</a>
             </div>
           </div>
           <div className="home-portal-pulse-v38" aria-label={isArabic ? "ملخص المنصة" : "Platform summary"}>
@@ -167,6 +169,10 @@ export default function HomePortal() {
             ))}
             {!portfolioCards.length && <EmptyCard text={isArabic ? "لا توجد محافظ منشورة حتى الآن." : "No published portfolios yet."}/>} 
           </div>}
+        </Reveal>
+
+        <Reveal as="section" className="home-section-v38" delay={65}>
+          <FinancialFreedomSimulator />
         </Reveal>
 
         <Reveal as="section" className="home-section-v38" delay={80}>
