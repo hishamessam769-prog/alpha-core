@@ -1,7 +1,7 @@
 {
-  "name": "alpha-platform-v3-8-2-executive-report",
+  "name": "alpha-platform-v3-9-0-robo-advisor",
   "private": true,
-  "version": "3.8.2",
+  "version": "3.9.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Activity, BarChart3, BellRing, BookOpen, FileSpreadsheet, Headphones, LayoutDashboard, Lightbulb, LogOut, Menu, MoreHorizontal, Newspaper, PenSquare, Settings, UserRound, UsersRound, WalletCards, X } from "lucide-react";
+import { Activity, BarChart3, BellRing, BookOpen, BrainCircuit, FileSpreadsheet, Headphones, LayoutDashboard, Lightbulb, LogOut, Menu, MoreHorizontal, Newspaper, PenSquare, Settings, UserRound, UsersRound, WalletCards, X } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import Brand from "./Brand";
 import GlobalSearch from "./GlobalSearch";
@@ -24,6 +24,7 @@ export default function DashboardHeader({ admin = false }) {
   const adminAccess = canAccessAdmin(profile);
 
   const exploreLinks = [
+    { to: "/advisor", label: isArabic ? "المستشار الذكي" : "Robo-Advisor", icon: BrainCircuit },
     { to: "/news", label: isArabic ? "الأخبار والتحليل" : "News & Analysis", icon: Newspaper },
     { to: "/weekly-reports", label: isArabic ? "تقارير الأبحاث" : "Research Reports", icon: BookOpen },
     { to: "/methodology", label: isArabic ? "المنهجية" : "Methodology", icon: BarChart3 },

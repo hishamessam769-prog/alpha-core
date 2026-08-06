@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
+  BrainCircuit,
   CalendarClock,
   Download,
   RefreshCw,
@@ -33,6 +34,7 @@ export default function AdminAnalytics() {
   const [windowHours, setWindowHours] = useState(24);
   const [analytics, setAnalytics] = useState(null);
   const [users, setUsers] = useState([]);
+  const [roboSummary, setRoboSummary] = useState(null);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -40,9 +42,10 @@ export default function AdminAnalytics() {
   const load = async () => {
     setLoading(true);
     setMessage("");
-    const [analyticsResult, usersResult] = await Promise.all([
+    const [analyticsResult, usersResult, roboResult] = await Promise.all([
       supabase.rpc("get_platform_analytics", { p_window_hours: windowHours }),
       supabase.rpc("get_registered_users"),
+      supabase.rpc("get_robo_advisor_summary"),
     ]);
     const error = analyticsResult.error || usersResult.error;
     if (error) {
@@ -50,6 +53,7 @@ export default function AdminAnalytics() {
     } else {
       setAnalytics(analyticsResult.data || {});
       setUsers(usersResult.data || []);
+      if (!roboResult.error) setRoboSummary(roboResult.data || null);
     }
     setLoading(false);
   };
@@ -106,6 +110,16 @@ export default function AdminAnalytics() {
           <AnalyticsCard icon={Activity} label={isArabic ? "إجمالي الجلسات" : "Total sessions"} value={formatNumber(analytics?.total_sessions, 0, locale)} note={`${formatNumber(analytics?.sessions_in_window, 0, locale)} ${isArabic ? "داخل الفترة" : "inside selected window"}`} tone="violet"/>
           <AnalyticsCard icon={TimerReset} label={isArabic ? "متوسط مدة الجلسة" : "Average session duration"} value={formatDuration(analytics?.average_session_seconds, isArabic)} note={isArabic ? "من أول فتح حتى آخر نشاط" : "From first open to last activity"} tone="green"/>
         </section>
+
+        {roboSummary && <section className="admin-robo-summary-v39">
+          <header><div><span className="eyebrow">ALPHA APEX · ROBO-ADVISOR</span><h2>{isArabic ? "توزيع ملفات المخاطر" : "Risk-persona distribution"}</h2><p>{isArabic ? "إحصاءات مجمعة فقط، من دون عرض إجابات المستخدمين الفردية." : "Aggregated adoption signals without exposing individual questionnaire answers."}</p></div><span><BrainCircuit/>{formatNumber(roboSummary.assessed_users, 0, locale)} {isArabic ? "مستخدمين" : "assessed users"}</span></header>
+          <div className="admin-robo-personas-v39">
+            <article className="conservative"><small>{isArabic ? "محافظ" : "Conservative"}</small><b>{formatNumber(roboSummary.conservative, 0, locale)}</b><span>5–7</span></article>
+            <article className="balanced"><small>{isArabic ? "متوازن" : "Balanced"}</small><b>{formatNumber(roboSummary.balanced, 0, locale)}</b><span>8–11</span></article>
+            <article className="aggressive"><small>{isArabic ? "هجومي" : "Aggressive"}</small><b>{formatNumber(roboSummary.aggressive, 0, locale)}</b><span>12–15</span></article>
+            <article className="average"><small>{isArabic ? "متوسط النقاط" : "Average score"}</small><b>{formatNumber(roboSummary.average_score, 2, locale)}</b><span>/15</span></article>
+          </div>
+        </section>}
 
         <section className="admin-users-panel-v38">
           <header>

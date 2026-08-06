@@ -1,4 +1,4 @@
-const VERSION = "alpha-pwa-v3.6.1";
+const VERSION = "alpha-pwa-v3.9.0";
 const STATIC_CACHE = `${VERSION}-static`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const OFFLINE_URL = "/offline.html";
@@ -6,7 +6,7 @@ const PRECACHE = [
   "/",
   "/index.html",
   OFFLINE_URL,
-  "/manifest.json?v=3.6.1",
+  "/manifest.json?v=3.9.0",
   "/icons/alpha-core-192.png",
   "/icons/alpha-core-512.png",
   "/icons/alpha-core-maskable-512.png",

@@ -3,6 +3,7 @@ import {
   Activity,
   ArrowUpRight,
   BookOpen,
+  BrainCircuit,
   CalendarDays,
   Clock3,
   FileText,
@@ -128,6 +129,7 @@ export default function HomePortal() {
             <div className="home-portal-hero-actions-v38">
               <Link className="button primary" to="/portfolios"><WalletCards size={16}/>{isArabic ? "استعراض المحافظ" : "Explore portfolios"}</Link>
               <Link className="button subtle" to="/recommendations"><TrendingUp size={16}/>{isArabic ? "متابعة التوصيات" : "Track recommendations"}</Link>
+              <Link className="button subtle" to="/advisor"><BrainCircuit size={16}/>{isArabic ? "ابنِ توزيعك الاستثماري" : "Build my allocation"}</Link>
             </div>
           </div>
           <div className="home-portal-pulse-v38" aria-label={isArabic ? "ملخص المنصة" : "Platform summary"}>
