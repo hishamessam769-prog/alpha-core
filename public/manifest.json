@@ -5,7 +5,7 @@
   "description": "Institutional Egyptian equity intelligence, portfolios, recommendations, research and market updates.",
   "lang": "en",
   "dir": "auto",
-  "start_url": "/dashboard?source=pwa&version=3.10.1",
+  "start_url": "/dashboard?source=pwa&version=3.10.2",
   "scope": "/",
   "display": "standalone",
   "display_override": [
@@ -13,8 +13,8 @@
     "minimal-ui"
   ],
   "orientation": "portrait-primary",
-  "background_color": "#eef7fd",
-  "theme_color": "#eaf5fe",
+  "background_color": "#08131f",
+  "theme_color": "#08131f",
   "categories": [
     "finance",
     "business",

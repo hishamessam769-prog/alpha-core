@@ -4,7 +4,7 @@ const ThemeContext = createContext(null);
 const STORAGE_KEY = "alpha-platform-theme";
 
 function initialTheme() {
-  return "light";
+  return "dark";
 }
 
 export function ThemeProvider({ children }) {
@@ -14,14 +14,14 @@ export function ThemeProvider({ children }) {
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
     window.localStorage.setItem(STORAGE_KEY, theme);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#eaf5fe");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#08131f");
   }, [theme]);
 
   const value = useMemo(() => ({
     theme,
     isDark: theme === "dark",
     setTheme,
-    toggleTheme: () => setTheme("light"),
+    toggleTheme: () => setTheme("dark"),
   }), [theme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
