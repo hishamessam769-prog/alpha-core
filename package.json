@@ -1,7 +1,7 @@
 {
-  "name": "alpha-platform-v3-9-1-financial-freedom-planner",
+  "name": "alpha-platform-v3-10-0-cirrus-light-redesign",
   "private": true,
-  "version": "3.9.1",
+  "version": "3.10.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
