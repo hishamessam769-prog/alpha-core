@@ -14,6 +14,7 @@ import "./push-notifications.css";
 import "./notification-center.css";
 import "./notification-inbox.css";
 import "./robo-advisor.css";
+import "./journal.css";
 import { registerAlphaServiceWorker } from "./lib/pwa";
 
 ReactDOM.createRoot(document.getElementById("root")).render(

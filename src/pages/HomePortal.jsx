@@ -131,6 +131,7 @@ export default function HomePortal() {
               <Link className="button primary" to="/portfolios"><WalletCards size={16}/>{isArabic ? "استعراض المحافظ" : "Explore portfolios"}</Link>
               <Link className="button subtle" to="/recommendations"><TrendingUp size={16}/>{isArabic ? "متابعة التوصيات" : "Track recommendations"}</Link>
               <Link className="button subtle" to="/advisor"><BrainCircuit size={16}/>{isArabic ? "ابنِ توزيعك الاستثماري" : "Build my allocation"}</Link>
+              <Link className="button subtle" to="/my-journal"><Activity size={16}/>{isArabic ? "افتح سجلي الشخصي" : "Open my journal"}</Link>
               <a className="button subtle" href="#financial-freedom-planner"><Target size={16}/>{isArabic ? "خطط لحريتك المالية" : "Plan financial freedom"}</a>
             </div>
           </div>

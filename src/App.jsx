@@ -27,6 +27,7 @@ import AdminNotifications from "./pages/AdminNotifications";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import NotificationInbox from "./pages/NotificationInbox";
 import RoboAdvisor from "./pages/RoboAdvisor";
+import MyJournal from "./pages/MyJournal";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SupportWidget from "./components/SupportWidget";
 import SmartSurvey from "./components/SmartSurvey";
@@ -65,6 +66,8 @@ export default function App() {
         <Route path="/notifications" element={<ProtectedRoute><NotificationInbox /></ProtectedRoute>} />
         <Route path="/advisor" element={<ProtectedRoute><RoboAdvisor /></ProtectedRoute>} />
         <Route path="/robo-advisor" element={<Navigate to="/advisor" replace />} />
+        <Route path="/my-journal" element={<ProtectedRoute><MyJournal /></ProtectedRoute>} />
+        <Route path="/tracker" element={<Navigate to="/my-journal" replace />} />
         <Route path="/admin" element={<ProtectedRoute adminOnly permission="manage_portfolios"><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/recommendations" element={<ProtectedRoute adminOnly permission="manage_recommendations"><RecommendationAdmin /></ProtectedRoute>} />
         <Route path="/admin/weekly-reports" element={<ProtectedRoute adminOnly permission="manage_reports"><WeeklyReportsAdmin /></ProtectedRoute>} />

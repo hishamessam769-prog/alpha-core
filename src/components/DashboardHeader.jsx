@@ -25,6 +25,7 @@ export default function DashboardHeader({ admin = false }) {
 
   const exploreLinks = [
     { to: "/advisor", label: isArabic ? "المستشار الذكي" : "Robo-Advisor", icon: BrainCircuit },
+    { to: "/my-journal", label: isArabic ? "سجلي الشخصي" : "My Journal", icon: Activity },
     { to: "/news", label: isArabic ? "الأخبار والتحليل" : "News & Analysis", icon: Newspaper },
     { to: "/weekly-reports", label: isArabic ? "تقارير الأبحاث" : "Research Reports", icon: BookOpen },
     { to: "/methodology", label: isArabic ? "المنهجية" : "Methodology", icon: BarChart3 },
@@ -64,6 +65,7 @@ export default function DashboardHeader({ admin = false }) {
 
         <div className="mobile-nav-actions">
           <div className="mobile-tools-row-v34"><ThemeToggle/><LanguageToggle compact/></div>
+          {!admin && <Link className="button subtle full" to="/my-journal" onClick={close}><Activity size={15}/>{isArabic ? "سجلي الشخصي" : "My Journal"}</Link>}
           {!admin && creatorAccess && <Link className="button primary full" to="/admin/publishing" onClick={close}><PenSquare size={15}/>{isArabic ? "إنشاء ونشر" : "Create & publish"}</Link>}
           {adminAccess && !admin && <Link className="button subtle full" to={workspaceRoute(profile)} onClick={close}><Settings size={15}/>{isArabic ? "مساحة الإدارة" : "Admin workspace"}</Link>}
           <Link className="button subtle full" to="/profile" onClick={close}><UserRound size={15}/>{isArabic ? "الملف الشخصي" : "Profile"}</Link>
@@ -78,6 +80,7 @@ export default function DashboardHeader({ admin = false }) {
         <HeaderMenu label={profile?.full_name || profile?.email || (isArabic ? "حسابي" : "Account")} icon={UserRound} align="end" className="account-menu-v34">
           <div className="account-summary-v34"><span className="profile-avatar"><UserRound size={15}/></span><div><b>{profile?.full_name || profile?.email}</b><small>{roleLabel(profile).toUpperCase()}</small></div></div>
           <Link to="/profile"><UserRound size={15}/>{isArabic ? "الملف والإعدادات" : "Profile & settings"}</Link>
+          {!admin && <Link to="/my-journal"><Activity size={15}/>{isArabic ? "سجلي الشخصي" : "My Journal"}</Link>}
           {creatorAccess && <Link to="/admin/publishing"><PenSquare size={15}/>{isArabic ? "استوديو النشر" : "Publishing studio"}</Link>}
           {adminAccess && !admin && <Link to={workspaceRoute(profile)}><Settings size={15}/>{isArabic ? "مساحة الإدارة" : "Admin workspace"}</Link>}
           {admin && <Link to="/dashboard"><LayoutDashboard size={15}/>{isArabic ? "عرض المنصة" : "Member view"}</Link>}

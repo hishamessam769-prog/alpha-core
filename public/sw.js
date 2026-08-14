@@ -1,4 +1,4 @@
-const VERSION = "alpha-pwa-v3.10.2";
+const VERSION = "alpha-pwa-v3.11.0";
 const STATIC_CACHE = `${VERSION}-static`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const OFFLINE_URL = "/offline.html";
@@ -6,7 +6,7 @@ const PRECACHE = [
   "/",
   "/index.html",
   OFFLINE_URL,
-  "/manifest.json?v=3.10.2",
+  "/manifest.json?v=3.11.0",
   "/icons/alpha-core-192.png",
   "/icons/alpha-core-512.png",
   "/icons/alpha-core-maskable-512.png",
@@ -27,7 +27,7 @@ self.addEventListener("activate", (event) => {
 });
 
 function isApiRequest(url) {
-  return url.hostname.includes("supabase.co") || url.pathname.startsWith("/rest/") || url.pathname.startsWith("/auth/");
+  return url.hostname.includes("supabase.co") || url.pathname.startsWith("/api/") || url.pathname.startsWith("/rest/") || url.pathname.startsWith("/auth/");
 }
 
 async function networkFirst(request) {
