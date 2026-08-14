@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   BarChart3,
   CalendarDays,
+  Camera,
   CheckCircle2,
   Gauge,
   History,
@@ -35,6 +36,7 @@ import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import {
   calculateJournalAnalytics,
+  extractLargestPortfolioValue,
   describeJournalAmount,
   formatJournalCurrency,
   journalPercent,
@@ -107,6 +109,9 @@ export default function MyJournal() {
   const [editingId, setEditingId] = useState(null);
   const [baselineForm, setBaselineForm] = useState({ capital: "", date: "" });
   const [snapshotForm, setSnapshotForm] = useState({ date: localDateInput(), value: "", note: "" });
+  const screenshotInputRef = useRef(null);
+  const [ocrStatus, setOcrStatus] = useState("");
+  const [ocrBusy, setOcrBusy] = useState(false);
 
   const load = async () => {
     try {
@@ -156,6 +161,47 @@ export default function MyJournal() {
     ? `${formatJournalCurrency(snapshotForm.value, locale)} · ${describeJournalAmount(snapshotForm.value, isArabic)}`
     : (isArabic ? "اكتب إجمالي قيمة المحفظة اليوم" : "Enter today’s total portfolio value");
 
+  const extractBalanceFromScreenshot = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type?.startsWith("image/")) {
+      setMessage(isArabic ? "اختر صورة Screenshot صالحة." : "Choose a valid screenshot image.");
+      return;
+    }
+    if (!window.Tesseract?.recognize) {
+      setMessage(isArabic ? "تعذر تحميل أداة قراءة الصور. تأكد من اتصال الإنترنت ثم حاول مرة أخرى." : "The screenshot reader could not load. Check your internet connection and try again.");
+      return;
+    }
+
+    try {
+      setOcrBusy(true);
+      setOcrStatus(isArabic ? "⏳ جاري استخراج الرصيد من الصورة..." : "⏳ Extracting the portfolio balance from the screenshot...");
+      const result = await window.Tesseract.recognize(file, "eng", {
+        logger: (progress) => {
+          if (progress?.status === "recognizing text" && Number.isFinite(progress.progress)) {
+            const pct = Math.max(1, Math.round(progress.progress * 100));
+            setOcrStatus(isArabic ? `⏳ جاري قراءة الصورة... ${pct}%` : `⏳ Reading screenshot... ${pct}%`);
+          }
+        },
+      });
+      const extracted = extractLargestPortfolioValue(result?.data?.text || "");
+      if (!extracted?.value) {
+        setOcrStatus(isArabic ? "لم أتمكن من العثور على إجمالي المحفظة. جرّب Screenshot أوضح." : "No portfolio total was detected. Try a clearer screenshot.");
+        return;
+      }
+      const normalizedValue = Number(extracted.value.toFixed(2));
+      setSnapshotForm((current) => ({ ...current, value: String(normalizedValue) }));
+      setOcrStatus(isArabic ? `✅ تم استخراج الرصيد تلقائيًا: ${formatJournalCurrency(normalizedValue, locale)}` : `✅ Balance extracted: ${formatJournalCurrency(normalizedValue, locale)}`);
+      setMessage("");
+    } catch (error) {
+      console.error("Screenshot OCR failed", error);
+      setOcrStatus(isArabic ? "تعذر قراءة الصورة. حاول بصورة أوضح أو أدخل الرقم يدويًا." : "The screenshot could not be read. Try a clearer image or enter the value manually.");
+    } finally {
+      setOcrBusy(false);
+    }
+  };
+
   const saveBaseline = async (event) => {
     event.preventDefault();
     const capital = Number(baselineForm.capital);
@@ -202,6 +248,7 @@ export default function MyJournal() {
         return [...filtered, payload.snapshot].sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date));
       });
       setSnapshotForm({ date: localDateInput(), value: "", note: "" });
+      setOcrStatus("");
       setEditingId(null);
       setMessage(isArabic ? "تم حفظ القراءة اليومية بنجاح." : "Daily snapshot saved successfully.");
     } catch (error) {
@@ -214,12 +261,14 @@ export default function MyJournal() {
   const editSnapshot = (row) => {
     setEditingId(row.id);
     setSnapshotForm({ date: row.snapshot_date, value: String(row.portfolio_value), note: row.session_note || "" });
+    setOcrStatus("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setSnapshotForm({ date: localDateInput(), value: "", note: "" });
+    setOcrStatus("");
   };
 
   const deleteSnapshot = async (row) => {
@@ -269,7 +318,18 @@ export default function MyJournal() {
             <header><div><span className="eyebrow">DAILY SNAPSHOT</span><h2>{editingId ? (isArabic ? "تعديل القراءة" : "Edit snapshot") : (isArabic ? "سجّل جلسة اليوم" : "Log today’s session")}</h2></div>{editingId && <button className="journal-icon-button" type="button" onClick={cancelEdit}><X/></button>}</header>
             <div className="journal-form-grid">
               <label><span><CalendarDays size={14}/>{isArabic ? "تاريخ الجلسة" : "Session date"}</span><input type="date" value={snapshotForm.date} onChange={(event) => setSnapshotForm((current) => ({ ...current, date: event.target.value }))}/></label>
-              <label className="journal-value-field"><span><Activity size={14}/>{isArabic ? "إجمالي قيمة المحفظة" : "Total portfolio value"}</span><input type="number" step="0.01" inputMode="decimal" placeholder="12,850,000" value={snapshotForm.value} onChange={(event) => setSnapshotForm((current) => ({ ...current, value: event.target.value }))}/><em>{snapshotPreview}</em></label>
+              <label className="journal-value-field">
+                <span><Activity size={14}/>{isArabic ? "إجمالي قيمة المحفظة" : "Total portfolio value"}</span>
+                <div className="journal-value-input-row">
+                  <input type="number" step="0.01" inputMode="decimal" placeholder="12,850,000" value={snapshotForm.value} onChange={(event) => { setSnapshotForm((current) => ({ ...current, value: event.target.value })); setOcrStatus(""); }}/>
+                  <button className="journal-camera-button" type="button" disabled={ocrBusy} onClick={() => screenshotInputRef.current?.click()} aria-label={isArabic ? "استخراج الرصيد من Screenshot" : "Extract balance from screenshot"} title={isArabic ? "ارفع Screenshot من Thndr لاستخراج إجمالي المحفظة تلقائيًا" : "Upload a Thndr screenshot to extract the portfolio total automatically"}>
+                    <Camera size={19}/>
+                    <span>{ocrBusy ? (isArabic ? "قراءة..." : "Reading...") : (isArabic ? "Screenshot" : "Screenshot")}</span>
+                  </button>
+                  <input ref={screenshotInputRef} className="journal-screenshot-input" type="file" accept="image/png,image/jpeg,image/webp,image/*" onChange={extractBalanceFromScreenshot}/>
+                </div>
+                <em className={ocrBusy ? "journal-ocr-loading" : ""}>{ocrStatus || snapshotPreview}</em>
+              </label>
               <label className="journal-note-field"><span><Sparkles size={14}/>{isArabic ? "ملاحظة الجلسة (اختياري)" : "Session note (optional)"}</span><input type="text" maxLength={1000} placeholder={isArabic ? "مثال: صعود ORHD وRAYA" : "Example: ORHD & RAYA rally"} value={snapshotForm.note} onChange={(event) => setSnapshotForm((current) => ({ ...current, note: event.target.value }))}/></label>
             </div>
             <button className="button primary journal-save-button" disabled={saving} type="submit"><Save size={16}/>{saving ? (isArabic ? "جاري الحفظ…" : "Saving…") : editingId ? (isArabic ? "حفظ التعديل" : "Save changes") : (isArabic ? "تسجيل Snapshot اليومي" : "Save daily snapshot")}</button>

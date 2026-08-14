@@ -1,7 +1,7 @@
 {
-  "name": "alpha-platform-v3-11-2-compound-interest-bilingual",
+  "name": "alpha-platform-v3-11-3-journal-screenshot-ocr",
   "private": true,
-  "version": "3.11.2",
+  "version": "3.11.3",
   "type": "module",
   "scripts": {
     "dev": "vite",

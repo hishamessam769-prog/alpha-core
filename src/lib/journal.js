@@ -1,11 +1,69 @@
 const TRADING_DAYS = 252;
 
-function toDateOnly(value) {
-  if (!value) return null;
-  if (value instanceof Date) return new Date(value.getFullYear(), value.getMonth(), value.getDate());
-  const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
-  if (!year || !month || !day) return null;
-  return new Date(year, month - 1, day);
+
+function normalizeOcrDigits(text = "") {
+  const arabicIndic = "٠١٢٣٤٥٦٧٨٩";
+  const easternArabic = "۰۱۲۳۴۵۶۷۸۹";
+  return String(text)
+    .replace(/[٠-٩]/g, (digit) => String(arabicIndic.indexOf(digit)))
+    .replace(/[۰-۹]/g, (digit) => String(easternArabic.indexOf(digit)))
+    .replace(/٬/g, ",")
+    .replace(/٫/g, ".")
+    .replace(/\u00a0/g, " ")
+    .replace(/\s*([,.])\s*/g, "$1");
+}
+
+function parseOcrNumberToken(token = "") {
+  const suffixMatch = String(token).trim().match(/([kmb])$/i);
+  const suffix = suffixMatch?.[1]?.toLowerCase() || "";
+  let raw = String(token).trim().replace(/[kmb]/ig, "").replace(/\s+/g, "");
+  const punctuation = [...raw.matchAll(/[,.]/g)].map((match) => ({ char: match[0], index: match.index }));
+
+  if (punctuation.length > 1) {
+    const last = punctuation.at(-1);
+    const decimals = raw.length - last.index - 1;
+    const treatLastAsDecimal = decimals > 0 && decimals <= 2 && punctuation.slice(0, -1).some((item) => item.char !== last.char || raw.length - item.index - 1 > 3);
+    if (treatLastAsDecimal) {
+      const integer = raw.slice(0, last.index).replace(/[,.]/g, "");
+      const fraction = raw.slice(last.index + 1).replace(/[,.]/g, "");
+      raw = `${integer}.${fraction}`;
+    } else {
+      raw = raw.replace(/[,.]/g, "");
+    }
+  } else if (punctuation.length === 1) {
+    const mark = punctuation[0];
+    const decimals = raw.length - mark.index - 1;
+    const digitsBefore = mark.index;
+    if (decimals === 3 && digitsBefore >= 1 && digitsBefore <= 3) raw = raw.replace(/[,.]/g, "");
+    else raw = raw.replace(mark.char, ".");
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  const multiplier = suffix === "b" ? 1_000_000_000 : suffix === "m" ? 1_000_000 : suffix === "k" ? 1_000 : 1;
+  return parsed * multiplier;
+}
+
+export function extractLargestPortfolioValue(rawText = "") {
+  const text = normalizeOcrDigits(rawText);
+  const pattern = /(?:^|[^\d])((?:\d{1,3}(?:(?:,|\.)\d{3})+(?:[,.]\d{1,2})?|\d{4,}(?:[,.]\d{1,2})?|\d+(?:[,.]\d+)?\s*[kmb]))(?!\s*%)/gim;
+  const candidates = [];
+  let match;
+
+  while ((match = pattern.exec(text)) !== null) {
+    const token = String(match[1] || "").trim();
+    const value = parseOcrNumberToken(token);
+    if (!Number.isFinite(value) || value <= 0) continue;
+
+    // Ignore obvious calendar fragments unless the OCR token looks like a money-sized value.
+    const formattedMoney = /[ ,.]/.test(token) || /[kmb]$/i.test(token) || value >= 10_000;
+    if (!formattedMoney && value >= 1900 && value <= 2100) continue;
+    candidates.push({ token, value });
+  }
+
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => b.value - a.value);
+  return candidates[0];
 }
 
 export function localDateInput(date = new Date()) {
