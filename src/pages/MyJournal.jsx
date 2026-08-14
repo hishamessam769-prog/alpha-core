@@ -36,7 +36,7 @@ import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import {
   calculateJournalAnalytics,
-  extractLargestPortfolioValue,
+  extractThndrPortfolioValue,
   describeJournalAmount,
   formatJournalCurrency,
   journalPercent,
@@ -90,6 +90,86 @@ function chartCurrency(value) {
   if (Math.abs(number) >= 1_000_000) return `${(number / 1_000_000).toFixed(1)}M`;
   if (Math.abs(number) >= 1_000) return `${(number / 1_000).toFixed(0)}K`;
   return number.toFixed(0);
+}
+
+
+async function loadScreenshotImage(file) {
+  if (typeof window !== "undefined" && "createImageBitmap" in window) {
+    const bitmap = await window.createImageBitmap(file);
+    return { image: bitmap, cleanup: () => bitmap.close?.() };
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  const image = new Image();
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = () => reject(new Error("Could not decode screenshot image."));
+    image.src = objectUrl;
+  });
+  return { image, cleanup: () => URL.revokeObjectURL(objectUrl) };
+}
+
+/**
+ * Thndr screenshots use bright text on a nearly-black canvas. OCR performs far
+ * better after we invert that palette so the screenshot becomes black text on
+ * white, then force it into a high-contrast monochrome image.
+ */
+async function preprocessThndrScreenshot(file) {
+  const { image, cleanup } = await loadScreenshotImage(file);
+  try {
+    const sourceWidth = Number(image.width || image.naturalWidth || 0);
+    const sourceHeight = Number(image.height || image.naturalHeight || 0);
+    if (!sourceWidth || !sourceHeight) throw new Error("Invalid screenshot dimensions.");
+
+    // Upscale phone screenshots before thresholding so comma separators remain
+    // distinct characters for Tesseract. Cap the width to protect mobile memory.
+    const desiredScale = sourceWidth < 1000 ? 2.2 : 1.35;
+    const scale = Math.max(1, Math.min(desiredScale, 1800 / sourceWidth));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(sourceWidth * scale);
+    canvas.height = Math.round(sourceHeight * scale);
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) throw new Error("Canvas is not available.");
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = frame.data;
+    for (let i = 0; i < pixels.length; i += 4) {
+      const gray = Math.round((pixels[i] * 0.299) + (pixels[i + 1] * 0.587) + (pixels[i + 2] * 0.114));
+      const inverted = 255 - gray;
+      // Pure B/W after inversion: Thndr's white/grey wealth label and number
+      // become black, while its black background becomes white.
+      const monochrome = inverted < 170 ? 0 : 255;
+      pixels[i] = monochrome;
+      pixels[i + 1] = monochrome;
+      pixels[i + 2] = monochrome;
+      pixels[i + 3] = 255;
+    }
+    ctx.putImageData(frame, 0, 0);
+
+    // The Thndr total-wealth block sits below the notification/status area and
+    // above the asset cards. OCR this focused band first to avoid stock values,
+    // percentages, battery numbers and notification text competing with it.
+    const cropX = Math.round(canvas.width * 0.035);
+    const cropY = Math.round(canvas.height * 0.12);
+    const cropWidth = Math.round(canvas.width * 0.93);
+    const cropHeight = Math.round(canvas.height * 0.30);
+    const focusCanvas = document.createElement("canvas");
+    focusCanvas.width = cropWidth;
+    focusCanvas.height = cropHeight;
+    const focusCtx = focusCanvas.getContext("2d");
+    if (!focusCtx) throw new Error("Focused OCR canvas is not available.");
+    focusCtx.fillStyle = "#ffffff";
+    focusCtx.fillRect(0, 0, cropWidth, cropHeight);
+    focusCtx.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
+    return { fullCanvas: canvas, focusCanvas };
+  } finally {
+    cleanup?.();
+  }
 }
 
 export default function MyJournal() {
@@ -176,24 +256,45 @@ export default function MyJournal() {
 
     try {
       setOcrBusy(true);
-      setOcrStatus(isArabic ? "⏳ جاري استخراج الرصيد من الصورة..." : "⏳ Extracting the portfolio balance from the screenshot...");
-      const result = await window.Tesseract.recognize(file, "eng", {
-        logger: (progress) => {
-          if (progress?.status === "recognizing text" && Number.isFinite(progress.progress)) {
-            const pct = Math.max(1, Math.round(progress.progress * 100));
-            setOcrStatus(isArabic ? `⏳ جاري قراءة الصورة... ${pct}%` : `⏳ Reading screenshot... ${pct}%`);
-          }
-        },
-      });
-      const extracted = extractLargestPortfolioValue(result?.data?.text || "");
+      setMessage("");
+      setOcrStatus(isArabic ? "⏳ جاري تجهيز الصورة ورفع التباين..." : "⏳ Preparing and enhancing the screenshot...");
+      const { focusCanvas, fullCanvas } = await preprocessThndrScreenshot(file);
+
+      const logger = (progress) => {
+        if (progress?.status === "recognizing text" && Number.isFinite(progress.progress)) {
+          const pct = Math.max(1, Math.round(progress.progress * 100));
+          setOcrStatus(isArabic ? `⏳ جاري قراءة إجمالي الثروة... ${pct}%` : `⏳ Reading total wealth... ${pct}%`);
+        }
+      };
+
+      let result;
+      try {
+        // Arabic is needed to anchor on "إجمالي الثروة"; English helps preserve
+        // comma-formatted Western digits used by Thndr.
+        result = await window.Tesseract.recognize(focusCanvas, "ara+eng", { logger });
+      } catch (languageError) {
+        console.warn("Arabic OCR pack unavailable, retrying numeric OCR in English.", languageError);
+        result = await window.Tesseract.recognize(focusCanvas, "eng", { logger });
+      }
+
+      let extracted = extractThndrPortfolioValue(result?.data?.text || "");
+
+      // Very unusual screenshots may place the wealth panel outside the normal
+      // band. Only then OCR the full inverted image as a fallback.
       if (!extracted?.value) {
-        setOcrStatus(isArabic ? "لم أتمكن من العثور على إجمالي المحفظة. جرّب Screenshot أوضح." : "No portfolio total was detected. Try a clearer screenshot.");
+        setOcrStatus(isArabic ? "⏳ إعادة فحص الصورة كاملة..." : "⏳ Re-checking the full screenshot...");
+        const fullResult = await window.Tesseract.recognize(fullCanvas, "eng", { logger });
+        extracted = extractThndrPortfolioValue(fullResult?.data?.text || "");
+      }
+
+      if (!extracted?.value) {
+        setOcrStatus(isArabic ? "لم أتمكن من قراءة إجمالي الثروة. جرّب Screenshot كامل وواضح من الصفحة الرئيسية في Thndr." : "The total wealth value was not detected. Try a clear, full Thndr home screenshot.");
         return;
       }
+
       const normalizedValue = Number(extracted.value.toFixed(2));
       setSnapshotForm((current) => ({ ...current, value: String(normalizedValue) }));
-      setOcrStatus(isArabic ? `✅ تم استخراج الرصيد تلقائيًا: ${formatJournalCurrency(normalizedValue, locale)}` : `✅ Balance extracted: ${formatJournalCurrency(normalizedValue, locale)}`);
-      setMessage("");
+      setOcrStatus(isArabic ? `✅ تم استخراج إجمالي الثروة: ${formatJournalCurrency(normalizedValue, locale)}` : `✅ Total wealth extracted: ${formatJournalCurrency(normalizedValue, locale)}`);
     } catch (error) {
       console.error("Screenshot OCR failed", error);
       setOcrStatus(isArabic ? "تعذر قراءة الصورة. حاول بصورة أوضح أو أدخل الرقم يدويًا." : "The screenshot could not be read. Try a clearer image or enter the value manually.");

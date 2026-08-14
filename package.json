@@ -1,7 +1,7 @@
 {
-  "name": "alpha-platform-v3-11-3-journal-screenshot-ocr",
+  "name": "alpha-platform-v3-11-4-journal-thndr-ocr-hotfix",
   "private": true,
-  "version": "3.11.3",
+  "version": "3.11.4",
   "type": "module",
   "scripts": {
     "dev": "vite",

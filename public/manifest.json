@@ -5,7 +5,7 @@
   "description": "Institutional Egyptian equity intelligence, portfolios, recommendations, research and market updates.",
   "lang": "en",
   "dir": "auto",
-  "start_url": "/dashboard?source=pwa&version=3.11.3",
+  "start_url": "/dashboard?source=pwa&version=3.11.4",
   "scope": "/",
   "display": "standalone",
   "display_override": [

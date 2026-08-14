@@ -44,7 +44,18 @@ function parseOcrNumberToken(token = "") {
   return parsed * multiplier;
 }
 
-export function extractLargestPortfolioValue(rawText = "") {
+function normalizeOcrArabic(text = "") {
+  return normalizeOcrDigits(text)
+    .replace(/[إأآٱ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .replace(/ـ/g, "")
+    .replace(/[\u064B-\u065F\u0670]/g, "")
+    .replace(/[|¦]/g, " ")
+    .replace(/[ \t]+/g, " ");
+}
+
+function collectOcrMoneyCandidates(rawText = "") {
   const text = normalizeOcrDigits(rawText);
   const pattern = /(?:^|[^\d])((?:\d{1,3}(?:(?:,|\.)\d{3})+(?:[,.]\d{1,2})?|\d{4,}(?:[,.]\d{1,2})?|\d+(?:[,.]\d+)?\s*[kmb]))(?!\s*%)/gim;
   const candidates = [];
@@ -55,15 +66,78 @@ export function extractLargestPortfolioValue(rawText = "") {
     const value = parseOcrNumberToken(token);
     if (!Number.isFinite(value) || value <= 0) continue;
 
-    // Ignore obvious calendar fragments unless the OCR token looks like a money-sized value.
     const formattedMoney = /[ ,.]/.test(token) || /[kmb]$/i.test(token) || value >= 10_000;
     if (!formattedMoney && value >= 1900 && value <= 2100) continue;
-    candidates.push({ token, value });
+
+    const before = text.slice(Math.max(0, match.index - 12), match.index);
+    const after = text.slice(pattern.lastIndex, pattern.lastIndex + 8);
+    if (/%/.test(after) || /(?:19|20)\d{2}/.test(token) && value < 10000) continue;
+
+    candidates.push({ token, value, index: match.index, before, after });
   }
 
+  return candidates;
+}
+
+export function extractLargestPortfolioValue(rawText = "") {
+  const candidates = collectOcrMoneyCandidates(rawText);
   if (!candidates.length) return null;
   candidates.sort((a, b) => b.value - a.value);
   return candidates[0];
+}
+
+/**
+ * Thndr-specific extraction. The total wealth value is visually located directly
+ * below the Arabic label "إجمالي الثروة (ج.م)". We first anchor on that label,
+ * then inspect the following OCR lines/characters before falling back to a
+ * money-shaped candidate ranking.
+ */
+export function extractThndrPortfolioValue(rawText = "") {
+  const normalized = normalizeOcrArabic(rawText);
+  const lines = normalized
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const labelRegex = /(?:اجمالي|اجمالى|اجمال)[^\n]{0,24}(?:الثروه|الثروة|الثرو|ثروه)/i;
+
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!labelRegex.test(lines[i])) continue;
+
+    // Thndr places the number directly below the wealth label. Search the label
+    // line plus the next three OCR lines and strongly prefer a comma-grouped,
+    // portfolio-sized amount.
+    const neighborhood = lines.slice(i, i + 4).join("\n");
+    const candidates = collectOcrMoneyCandidates(neighborhood)
+      .filter((candidate) => candidate.value >= 100_000 && candidate.value <= 100_000_000_000)
+      .sort((a, b) => {
+        const aGrouped = /\d{1,3}(?:[,.]\d{3}){2,}/.test(a.token) ? 1 : 0;
+        const bGrouped = /\d{1,3}(?:[,.]\d{3}){2,}/.test(b.token) ? 1 : 0;
+        if (aGrouped !== bGrouped) return bGrouped - aGrouped;
+        return a.index - b.index;
+      });
+
+    if (candidates.length) return { ...candidates[0], source: "thndr-label" };
+  }
+
+  // OCR engines can occasionally distort Arabic labels even after inversion.
+  // In the focused Thndr crop, the real total is usually the largest standalone
+  // comma-formatted value. Rank those before using the generic fallback.
+  const ranked = collectOcrMoneyCandidates(normalized)
+    .filter((candidate) => candidate.value >= 100_000 && candidate.value <= 100_000_000_000)
+    .sort((a, b) => {
+      const aGroups = (a.token.match(/[,.]/g) || []).length;
+      const bGroups = (b.token.match(/[,.]/g) || []).length;
+      const aStandalone = /^\d{1,3}(?:[,.]\d{3}){2,}(?:[,.]\d{1,2})?$/.test(a.token) ? 1 : 0;
+      const bStandalone = /^\d{1,3}(?:[,.]\d{3}){2,}(?:[,.]\d{1,2})?$/.test(b.token) ? 1 : 0;
+      const scoreA = aStandalone * 50 + Math.min(aGroups, 4) * 10 + Math.log10(a.value);
+      const scoreB = bStandalone * 50 + Math.min(bGroups, 4) * 10 + Math.log10(b.value);
+      return scoreB - scoreA;
+    });
+
+  if (ranked.length) return { ...ranked[0], source: "thndr-focused-fallback" };
+  const fallback = extractLargestPortfolioValue(normalized);
+  return fallback ? { ...fallback, source: "generic-fallback" } : null;
 }
 
 export function localDateInput(date = new Date()) {
