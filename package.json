@@ -1,7 +1,7 @@
 {
-  "name": "alpha-platform-v3-11-private-portfolio-journal",
+  "name": "alpha-platform-v3-11-1-compound-interest-public",
   "private": true,
-  "version": "3.11.0",
+  "version": "3.11.1",
   "type": "module",
   "scripts": {
     "dev": "vite",

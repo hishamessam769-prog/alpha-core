@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BarChart3, BookOpen, LayoutDashboard, Lightbulb, Menu, MoreHorizontal, Newspaper, UserRound, WalletCards, X } from "lucide-react";
+import { BarChart3, BookOpen, Calculator, LayoutDashboard, Lightbulb, Menu, MoreHorizontal, Newspaper, UserRound, WalletCards, X } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 import Brand from "./Brand";
 import GlobalSearch from "./GlobalSearch";
@@ -28,6 +28,7 @@ export default function PublicHeader() {
           <NavLink to="/news" onClick={close}><Newspaper size={15}/>{isArabic ? "الأخبار والتحليل" : "News & Analysis"}</NavLink>
           <NavLink to="/weekly-reports" onClick={close}><BookOpen size={15}/>{isArabic ? "تقارير الأبحاث" : "Research Reports"}</NavLink>
           <NavLink to="/methodology" onClick={close}><BarChart3 size={15}/>{isArabic ? "المنهجية" : "Methodology"}</NavLink>
+          <a href="/compound-interest-calculator" onClick={close}><Calculator size={15}/>{isArabic ? "حاسبة الفائدة المركبة" : "Compound Interest Calculator"}</a>
           <a href="/#pricing" onClick={close}>{isArabic ? "الأسعار" : "Pricing"}</a>
         </HeaderMenu>
         <div className="mobile-nav-actions"><div className="mobile-tools-row-v34"><ThemeToggle/><LanguageToggle compact /></div>{session ? <Link className="button primary full" to={destination} onClick={close}>{profile?.is_admin ? t("admin") : t("navDashboard")}</Link> : <><Link className="button subtle full" to="/login" onClick={close}>{t("login")}</Link><Link className="button primary full" to="/signup" onClick={close}>{t("signup")}</Link></>}</div>
