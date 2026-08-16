@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Component, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   BarChart3,
@@ -65,6 +65,50 @@ async function journalRequest(session, method = "GET", body = null, query = "") 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || `Request failed (${response.status})`);
   return payload;
+}
+
+
+class JournalChartErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { failed: false, message: "" };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { failed: true, message: error?.message || String(error) };
+  }
+
+  componentDidCatch(error, info) {
+    console.error("Journal chart render failed without affecting saved data:", error, info);
+  }
+
+  componentDidUpdate(previousProps) {
+    if (this.state.failed && previousProps.resetKey !== this.props.resetKey) {
+      this.setState({ failed: false, message: "" });
+    }
+  }
+
+  render() {
+    if (this.state.failed) {
+      return <div className="journal-chart-empty"><BarChart3/><b>{this.props.fallbackLabel}</b><small>{this.state.message}</small></div>;
+    }
+    return this.props.children;
+  }
+}
+
+function normalizeJournalSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== "object") return null;
+  const id = String(snapshot.id || "").trim();
+  const snapshotDate = String(snapshot.snapshot_date || "").trim();
+  const portfolioValue = Number(snapshot.portfolio_value);
+  if (!id || !/^\d{4}-\d{2}-\d{2}$/.test(snapshotDate) || !Number.isFinite(portfolioValue) || portfolioValue <= 0) return null;
+  return {
+    ...snapshot,
+    id,
+    snapshot_date: snapshotDate,
+    portfolio_value: portfolioValue,
+    session_note: String(snapshot.session_note || ""),
+  };
 }
 
 function MetricCard({ icon: Icon, label, value, sub, tone = "cyan", badge }) {
@@ -197,8 +241,11 @@ export default function MyJournal() {
     try {
       setLoading(true);
       const payload = await journalRequest(session);
+      const safeSnapshots = Array.isArray(payload.snapshots)
+        ? payload.snapshots.map(normalizeJournalSnapshot).filter(Boolean)
+        : [];
       setSettings(payload.settings || null);
-      setSnapshots(payload.snapshots || []);
+      setSnapshots(safeSnapshots);
       if (payload.settings) {
         setBaselineForm({
           capital: String(payload.settings.baseline_capital || ""),
@@ -208,8 +255,11 @@ export default function MyJournal() {
         setShowSettings(true);
       }
       setMessage("");
+      return true;
     } catch (error) {
+      console.error("Journal load failed:", error);
       setMessage(localizeError(error.message || String(error), isArabic));
+      return false;
     } finally {
       setLoading(false);
     }
@@ -325,35 +375,60 @@ export default function MyJournal() {
 
   const saveSnapshot = async (event) => {
     event.preventDefault();
-    if (!settings?.baseline_capital) {
-      setShowSettings(true);
-      setMessage(isArabic ? "حدد رأس مال البداية أولًا قبل إضافة القراءات." : "Set your starting capital before adding snapshots.");
-      return;
-    }
-    const portfolioValue = Number(snapshotForm.value);
-    if (!snapshotForm.date || !Number.isFinite(portfolioValue) || portfolioValue <= 0) {
-      setMessage(isArabic ? "أدخل تاريخًا وقيمة صحيحة للمحفظة." : "Enter a valid date and portfolio value.");
-      return;
-    }
     try {
+      if (!settings?.baseline_capital) {
+        setShowSettings(true);
+        setMessage(isArabic ? "حدد رأس مال البداية أولًا قبل إضافة القراءات." : "Set your starting capital before adding snapshots.");
+        return;
+      }
+
+      // OCR always writes a plain numeric string, but strip commas defensively
+      // so a manually pasted formatted amount cannot trigger an invalid number.
+      const normalizedValue = String(snapshotForm.value || "").replace(/,/g, "").trim();
+      const portfolioValue = Number(normalizedValue);
+      const snapshotDate = String(snapshotForm.date || "").trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(snapshotDate) || !Number.isFinite(portfolioValue) || portfolioValue <= 0) {
+        setMessage(isArabic ? "أدخل تاريخًا وقيمة صحيحة للمحفظة." : "Enter a valid date and portfolio value.");
+        return;
+      }
+
       setSaving(true);
       const body = {
-        snapshotDate: snapshotForm.date,
+        snapshotDate,
         portfolioValue,
-        sessionNote: snapshotForm.note,
+        sessionNote: String(snapshotForm.note || "").trim(),
         ...(editingId ? { id: editingId } : {}),
       };
+
+      // The API/DB write happens first. Nothing below can undo a successful save.
       const payload = await journalRequest(session, editingId ? "PATCH" : "POST", body);
-      setSnapshots((current) => {
-        const filtered = current.filter((item) => item.id !== payload.snapshot.id && item.snapshot_date !== payload.snapshot.snapshot_date);
-        return [...filtered, payload.snapshot].sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date));
-      });
+      const savedSnapshot = normalizeJournalSnapshot(payload?.snapshot);
+      if (!savedSnapshot) throw new Error("Snapshot was saved but the server returned an invalid snapshot payload.");
+
+      // Keep a tiny device-side recovery copy. Supabase remains the source of truth.
+      try {
+        const backupKey = `alpha-journal-last-snapshot-${session?.user?.id || "current"}`;
+        window.localStorage?.setItem(backupKey, JSON.stringify(savedSnapshot));
+      } catch (backupError) {
+        console.warn("Journal local recovery backup failed:", backupError);
+      }
+
       setSnapshotForm({ date: localDateInput(), value: "", note: "" });
       setOcrStatus("");
       setEditingId(null);
       setMessage(isArabic ? "تم حفظ القراءة اليومية بنجاح." : "Daily snapshot saved successfully.");
+
+      // Refresh from the database instead of relying on a potentially malformed
+      // optimistic state update. If a visual component fails, the DB row is safe.
+      const refreshed = await load();
+      setMessage(refreshed
+        ? (isArabic ? "تم حفظ القراءة اليومية بنجاح." : "Daily snapshot saved successfully.")
+        : (isArabic ? "تم حفظ القراءة في قاعدة البيانات، لكن تعذر تحديث الشاشة الآن. أعد فتح الصفحة." : "The snapshot was saved to the database, but the screen could not refresh. Reopen the page."));
     } catch (error) {
-      setMessage(localizeError(error.message || String(error), isArabic));
+      console.error("Journal snapshot save failed:", error);
+      const detail = error?.message || String(error);
+      setMessage(localizeError(detail, isArabic));
+      if (typeof window !== "undefined") window.alert(`Error saving: ${detail}`);
     } finally {
       setSaving(false);
     }
@@ -470,16 +545,18 @@ export default function MyJournal() {
         <Reveal as="section" className="journal-chart-card" delay={100}>
           <header><div><span className="eyebrow">PERFORMANCE TREND</span><h2>{isArabic ? "مسار قيمة المحفظة" : "Portfolio value trajectory"}</h2></div><span className="journal-chart-current">{formatJournalCurrency(analytics.currentValue, locale)}</span></header>
           <div className="journal-chart-wrap">
-            {analytics.chartPoints.length ? <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={analytics.chartPoints} margin={{ top: 18, right: 14, left: 8, bottom: 6 }}>
-                <defs><linearGradient id="journalValueFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#38bdf8" stopOpacity={0.32}/><stop offset="100%" stopColor="#38bdf8" stopOpacity={0.01}/></linearGradient></defs>
-                <CartesianGrid stroke="rgba(148,163,184,.09)" vertical={false}/>
-                <XAxis dataKey="date" tickFormatter={(value) => String(value).slice(5)} tick={{ fill: "#7f91a8", fontSize: 10 }} axisLine={false} tickLine={false}/>
-                <YAxis tickFormatter={chartCurrency} tick={{ fill: "#7f91a8", fontSize: 10 }} axisLine={false} tickLine={false} width={48}/>
-                <Tooltip content={({ active, payload, label }) => active && payload?.length ? <div className="journal-tooltip"><b>{formatDateLabel(label, locale)}</b><strong>{formatJournalCurrency(payload[0].value, locale)}</strong>{payload[0]?.payload?.note && <small>{payload[0].payload.note}</small>}</div> : null}/>
-                <Area type="monotone" dataKey="value" stroke="#38bdf8" strokeWidth={3} fill="url(#journalValueFill)" dot={{ r: 3, fill: "#10b981", stroke: "#0b1120", strokeWidth: 2 }} activeDot={{ r: 6 }}/>
-              </AreaChart>
-            </ResponsiveContainer> : <div className="journal-chart-empty"><BarChart3/><b>{isArabic ? "أضف قراءتين أو أكثر لرؤية الاتجاه" : "Add snapshots to build your trend"}</b></div>}
+            {analytics.chartPoints.length >= 2 ? <JournalChartErrorBoundary resetKey={`${timeframe}-${analytics.chartPoints.length}-${analytics.currentValue}`} fallbackLabel={isArabic ? "تم حفظ البيانات، لكن تعذر عرض الرسم مؤقتًا" : "Data is saved, but the chart could not render temporarily"}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={analytics.chartPoints} margin={{ top: 18, right: 14, left: 8, bottom: 6 }}>
+                  <defs><linearGradient id="journalValueFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#38bdf8" stopOpacity={0.32}/><stop offset="100%" stopColor="#38bdf8" stopOpacity={0.01}/></linearGradient></defs>
+                  <CartesianGrid stroke="rgba(148,163,184,.09)" vertical={false}/>
+                  <XAxis dataKey="date" tickFormatter={(value) => String(value).slice(5)} tick={{ fill: "#7f91a8", fontSize: 10 }} axisLine={false} tickLine={false}/>
+                  <YAxis tickFormatter={chartCurrency} tick={{ fill: "#7f91a8", fontSize: 10 }} axisLine={false} tickLine={false} width={48}/>
+                  <Tooltip content={({ active, payload, label }) => active && payload?.length ? <div className="journal-tooltip"><b>{formatDateLabel(label, locale)}</b><strong>{formatJournalCurrency(payload[0].value, locale)}</strong>{payload[0]?.payload?.note && <small>{payload[0].payload.note}</small>}</div> : null}/>
+                  <Area type="monotone" dataKey="value" stroke="#38bdf8" strokeWidth={3} fill="url(#journalValueFill)" dot={{ r: 3, fill: "#10b981", stroke: "#0b1120", strokeWidth: 2 }} activeDot={{ r: 6 }}/>
+                </AreaChart>
+              </ResponsiveContainer>
+            </JournalChartErrorBoundary> : <div className="journal-chart-empty"><BarChart3/><b>{isArabic ? "أضف قراءتين أو أكثر لرؤية الاتجاه" : "Add two or more snapshots to build your trend"}</b></div>}
           </div>
         </Reveal>
 

@@ -1,7 +1,7 @@
 {
-  "name": "alpha-platform-v3-11-4-journal-thndr-ocr-hotfix",
+  "name": "alpha-platform-v3-11-5-journal-save-crash-hotfix",
   "private": true,
-  "version": "3.11.4",
+  "version": "3.11.5",
   "type": "module",
   "scripts": {
     "dev": "vite",
