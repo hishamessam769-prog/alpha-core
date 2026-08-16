@@ -216,7 +216,43 @@ async function preprocessThndrScreenshot(file) {
   }
 }
 
-export default function MyJournal() {
+class JournalPageErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error("Private Journal page crashed:", error, info);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="dashboard-shell journal-shell">
+          <DashboardHeader />
+          <main className="journal-page">
+            <section className="journal-entry-card" style={{ maxWidth: 760, margin: "32px auto" }}>
+              <span className="eyebrow">PRIVATE JOURNAL · RECOVERY MODE</span>
+              <h2>Journal display error</h2>
+              <p style={{ color: "var(--muted)" }}>Your saved journal data was not deleted. Reload this page to retry the visual layer.</p>
+              <small style={{ display: "block", marginBottom: 16, color: "#fca5a5" }}>{this.state.error?.message || String(this.state.error)}</small>
+              <button className="button primary" type="button" onClick={() => window.location.reload()}>Reload journal</button>
+            </section>
+          </main>
+          <PlatformFooter />
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function MyJournalContent() {
   const { session } = useAuth();
   const { isArabic } = useLanguage();
   const locale = isArabic ? "ar-EG" : "en-EG";
@@ -580,4 +616,9 @@ export default function MyJournal() {
       <PlatformFooter/>
     </div>
   );
+}
+
+
+export default function MyJournal() {
+  return <JournalPageErrorBoundary><MyJournalContent /></JournalPageErrorBoundary>;
 }
