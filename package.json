@@ -1,7 +1,7 @@
 {
-  "name": "alpha-platform-v3-11-8-journal-hydration-gate",
+  "name": "alpha-platform-v3-11-9-build-fix",
   "private": true,
-  "version": "3.11.8",
+  "version": "3.11.9",
   "type": "module",
   "scripts": {
     "dev": "vite",
