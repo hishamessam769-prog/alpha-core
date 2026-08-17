@@ -1,0 +1,6 @@
+الخطوة الأولى فقط:
+افتح Supabase > SQL Editor > New Query.
+افتح ملف supabase/upgrade_v2_3.sql وانسخ محتواه بالكامل.
+الصقه واضغط Run مرة واحدة.
+لا تمسح أي Database أو جدول أو Query قديم.
+بعد ظهور Success ارفع ملفات المشروع على GitHub.
