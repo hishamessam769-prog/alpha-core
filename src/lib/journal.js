@@ -165,12 +165,13 @@ export function localDateInput(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-export function formatJournalCurrency(value, locale = "en-EG", decimals = 2) {
+export function formatJournalCurrency(value, locale = "en-EG") {
   const number = Number(value || 0);
+  const safeNumber = Number.isFinite(number) ? number : 0;
   return `${new Intl.NumberFormat(locale, {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  }).format(number)} EGP`;
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(safeNumber))} EGP`;
 }
 
 export function describeJournalAmount(value, isArabic = false) {
@@ -179,7 +180,7 @@ export function describeJournalAmount(value, isArabic = false) {
   if (amount >= 1_000_000_000) return `${(amount / 1_000_000_000).toFixed(2)} ${isArabic ? "مليار جنيه" : "bn EGP"}`;
   if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(2)} ${isArabic ? "مليون جنيه" : "m EGP"}`;
   if (amount >= 1_000) return `${(amount / 1_000).toFixed(1)} ${isArabic ? "ألف جنيه" : "k EGP"}`;
-  return formatJournalCurrency(amount, isArabic ? "ar-EG" : "en-EG", 2);
+  return formatJournalCurrency(amount, isArabic ? "ar-EG" : "en-EG");
 }
 
 export function journalPercent(value, digits = 2) {

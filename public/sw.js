@@ -1,4 +1,4 @@
-const VERSION = "alpha-pwa-v3.11.6";
+const VERSION = "alpha-pwa-v3.11.7";
 const STATIC_CACHE = `${VERSION}-static`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const OFFLINE_URL = "/offline.html";
