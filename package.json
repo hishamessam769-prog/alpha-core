@@ -1,7 +1,7 @@
 {
-  "name": "alpha-platform-v3-12-master-assets-virtual-portfolios",
+  "name": "alpha-platform-v3-13-event-driven-portfolios",
   "private": true,
-  "version": "3.12.0",
+  "version": "3.13.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

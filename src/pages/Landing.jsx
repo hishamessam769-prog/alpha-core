@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, BarChart3, BriefcaseBusiness, Check, FileClock, Globe2, LockKeyhole, Newspaper, ShieldCheck, Sparkles, Target, TrendingUp, UsersRound } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
-import MarketGraphic from "../components/MarketGraphic";
+import MarketGraphic, { MarketIndicesBar } from "../components/MarketGraphic";
 import PlatformFooter from "../components/PlatformFooter";
 import Reveal from "../components/Reveal";
 import PublicHeader from "../components/PublicHeader";
@@ -66,6 +66,7 @@ export default function Landing() {
     <div className="public-page landing-v3">
       <PublicHeader />
       <SetupNotice />
+      <MarketIndicesBar isArabic={isArabic} locale={isArabic ? "ar-EG" : "en-GB"}/>
       <main>
         <section className="hero-v3">
           <div className="hero-grid-glow"/>

@@ -78,6 +78,9 @@ export default function AdminDashboard() {
   const [saving, setSaving] = useState(false);
   const [activities, setActivities] = useState([]);
   const [reportOpen, setReportOpen] = useState(false);
+  const [eventEditorOpen, setEventEditorOpen] = useState(false);
+  const [eventSaving, setEventSaving] = useState(false);
+  const [eventForm, setEventForm] = useState({ event_date: new Date().toISOString().slice(0, 10), event_type: "exit_to_cash", affected_ticker: "", execution_price: 0, reason: "", notify_followers: true, allocations: [] });
 
   const isSuperAdmin = Boolean(profile?.is_super_admin);
   const metrics = useMemo(() => calculateMonth(form), [form]);
@@ -87,7 +90,7 @@ export default function AdminDashboard() {
   const loadData = async ({ preferredPortfolioId, preferredMonthId } = {}) => {
     const [{ data: portfolioRows, error: portfolioError }, { data: monthRows, error: monthError }, { data: memberRows, error: memberError }, { data: activityRows, error: activityError }] = await Promise.all([
       supabase.from("portfolios").select("*").order("created_at", { ascending: true }),
-      supabase.from("strategy_months").select("*, holdings(*), swaps(*), snapshots(*)").order("month_key", { ascending: false }),
+      supabase.from("strategy_months").select("*, holdings(*), swaps(*), snapshots(*), portfolio_events(*, portfolio_event_allocations(*))").order("month_key", { ascending: false }),
       supabase.from("profiles").select("id, full_name, email, newsletter_opt_in, created_at, is_admin, is_super_admin").order("created_at", { ascending: false }),
       supabase.from("activity_logs").select("*").order("occurred_at", { ascending: false }).limit(60),
     ]);
@@ -200,6 +203,101 @@ export default function AdminDashboard() {
   const removeHolding = (index) => {
     if (form.holdings.length <= 1) return;
     setForm((current) => ({ ...current, holdings: current.holdings.filter((_, currentIndex) => currentIndex !== index) }));
+  };
+
+  const eventBaseAllocations = () => {
+    const events = [...(form?.portfolio_events || [])].filter((event) => event.is_published !== false).sort((a,b) => String(a.event_date || "").localeCompare(String(b.event_date || "")) || Number(a.sequence_no || 0)-Number(b.sequence_no || 0));
+    const latest = events.at(-1);
+    if (latest?.portfolio_event_allocations?.length) return latest.portfolio_event_allocations.map((item) => ({ ticker: String(item.ticker || "").toUpperCase(), weight_pct: Number(item.weight_pct || 0), reference_price: Number(item.latest_price || item.reference_price || 1) }));
+    return (form?.holdings || []).map((holding) => ({ ticker: String(holding.ticker || "").toUpperCase(), weight_pct: Number(holding.weight || 0), reference_price: Number(holding.close_price || holding.open_price || 0) }));
+  };
+
+  const openEventEditor = () => {
+    if (!form?.id) return setMessage(isArabic ? "احفظ الشهر وانشره أولًا قبل إضافة إجراء منتصف الشهر." : "Save the month first before adding a mid-month action.");
+    if (form?.is_closed) return setMessage(isArabic ? "الشهر المغلق لا يقبل إجراءات جديدة." : "Closed months cannot accept new actions.");
+    const base = eventBaseAllocations();
+    const first = base.find((item) => item.ticker !== "CASH");
+    const cash = base.find((item) => item.ticker === "CASH");
+    const allocations = base.filter((item) => item.ticker !== first?.ticker && item.ticker !== "CASH");
+    const cashWeight = Number(cash?.weight_pct || 0) + Number(first?.weight_pct || 0);
+    if (cashWeight > 0) allocations.push({ ticker: "CASH", weight_pct: cashWeight, reference_price: 1 });
+    const today = new Date().toISOString().slice(0,10);
+    const eventDate = today.startsWith(`${form.month_key}-`) ? today : `${form.month_key}-15`;
+    setEventForm({ event_date: eventDate, event_type: "exit_to_cash", affected_ticker: first?.ticker || "", execution_price: Number(first?.reference_price || 0), reason: "", notify_followers: true, allocations });
+    setEventEditorOpen(true);
+  };
+
+  const setEventType = (type) => {
+    const base = eventBaseAllocations();
+    const affected = eventForm.affected_ticker || base.find((item) => item.ticker !== "CASH")?.ticker || "";
+    let allocations = base.map((item) => ({ ...item }));
+    if (type === "exit_to_cash" && affected) {
+      const removed = allocations.find((item) => item.ticker === affected);
+      const cash = allocations.find((item) => item.ticker === "CASH");
+      allocations = allocations.filter((item) => item.ticker !== affected && item.ticker !== "CASH");
+      const cashWeight = Number(cash?.weight_pct || 0) + Number(removed?.weight_pct || 0);
+      if (cashWeight > 0) allocations.push({ ticker: "CASH", weight_pct: cashWeight, reference_price: 1 });
+    } else if (type === "exit_redistribute" && affected) {
+      allocations = allocations.filter((item) => item.ticker !== affected);
+    }
+    setEventForm((current) => ({ ...current, event_type: type, affected_ticker: affected, allocations }));
+  };
+
+  const changeAffectedTicker = (ticker) => {
+    const base = eventBaseAllocations();
+    const row = base.find((item) => item.ticker === ticker);
+    setEventForm((current) => {
+      let allocations = current.allocations;
+      if (current.event_type === "exit_to_cash") {
+        const cash = base.find((item) => item.ticker === "CASH");
+        allocations = base.filter((item) => item.ticker !== ticker && item.ticker !== "CASH");
+        const cashWeight = Number(cash?.weight_pct || 0) + Number(row?.weight_pct || 0);
+        if (cashWeight > 0) allocations.push({ ticker: "CASH", weight_pct: cashWeight, reference_price: 1 });
+      } else if (current.event_type === "exit_redistribute") {
+        allocations = base.filter((item) => item.ticker !== ticker);
+      }
+      return { ...current, affected_ticker: ticker, execution_price: Number(row?.reference_price || 0), allocations };
+    });
+  };
+
+  const updateEventAllocation = (index, field, value) => setEventForm((current) => ({ ...current, allocations: current.allocations.map((item, i) => i === index ? { ...item, [field]: field === "ticker" ? String(value).toUpperCase().replace(/[^A-Z0-9._-]/g, "").slice(0,24) : Number(value || 0) } : item) }));
+  const addEventAllocation = () => setEventForm((current) => ({ ...current, allocations: [...current.allocations, { ticker: "", weight_pct: 0, reference_price: 0 }] }));
+  const removeEventAllocation = (index) => setEventForm((current) => ({ ...current, allocations: current.allocations.filter((_, i) => i !== index) }));
+  const equalizeEventAllocations = () => setEventForm((current) => { const investable=current.allocations.filter((item)=>item.ticker!=="CASH"); if(!investable.length)return current; const cashWeight=Number(current.allocations.find((item)=>item.ticker==="CASH")?.weight_pct||0); const weight=(100-cashWeight)/investable.length; return { ...current, allocations: current.allocations.map((item)=>item.ticker==="CASH"?item:{...item,weight_pct:Number(weight.toFixed(4))}) }; });
+
+  const savePortfolioEvent = async () => {
+    if (eventSaving || !form?.id) return;
+    const allocations = eventForm.allocations.filter((item) => item.ticker && Number(item.weight_pct) >= 0);
+    const total = allocations.reduce((sum,item)=>sum+Number(item.weight_pct||0),0);
+    if (Math.abs(total-100) > .01) return setMessage(isArabic ? `توزيع ما بعد الحدث = ${total.toFixed(2)}% ويجب أن يساوي 100%.` : `Post-event allocation totals ${total.toFixed(2)}%; it must equal 100%.`);
+    if (!eventForm.reason.trim()) return setMessage(isArabic ? "اكتب سبب القرار بوضوح للـAudit Trail." : "Add a clear reason for the audit trail.");
+    setEventSaving(true);
+    try {
+      const { error } = await supabase.rpc("create_portfolio_event", {
+        p_month_id: form.id,
+        p_event_date: eventForm.event_date,
+        p_event_type: eventForm.event_type,
+        p_affected_ticker: eventForm.affected_ticker || null,
+        p_execution_price: Number(eventForm.execution_price || 0) || null,
+        p_reason: eventForm.reason.trim(),
+        p_allocations: allocations.map((item) => ({ ticker: item.ticker, weight_pct: Number(item.weight_pct) })),
+        p_notify_followers: Boolean(eventForm.notify_followers),
+      });
+      if (error) throw error;
+      setEventEditorOpen(false);
+      setMessage(isArabic ? "تم تسجيل الإجراء وتجميد الأداء حتى سعر التنفيذ، وتم توجيه الإشعار لمتابعي المحفظة فقط." : "Portfolio action recorded. Performance is frozen at execution and followers were targeted only.");
+      if (eventForm.notify_followers) void dispatchQueuedPushNotifications();
+      await loadData({ preferredPortfolioId: form.portfolio_id, preferredMonthId: form.id });
+    } catch (error) { setMessage(error.message); } finally { setEventSaving(false); }
+  };
+
+  const deletePortfolioEvent = async (eventId) => {
+    if (!isSuperAdmin || !eventId) return;
+    if (!window.confirm(isArabic ? "حذف هذا الحدث سيعيد حساب أداء الشهر بدون هذا القرار. هل تؤكد؟" : "Deleting this event changes the month's performance history. Confirm?")) return;
+    const { error } = await supabase.rpc("delete_portfolio_event", { p_event_id: eventId });
+    if (error) return setMessage(error.message);
+    setMessage(isArabic ? "تم حذف الحدث وإعادة فتح الحساب التاريخي بدونه." : "Event deleted; historical calculation now excludes it.");
+    await loadData({ preferredPortfolioId: form.portfolio_id, preferredMonthId: form.id });
   };
 
   const persistMonth = async ({ publish = form.is_published, close = false } = {}) => {
@@ -380,7 +478,7 @@ export default function AdminDashboard() {
             <div className="admin-actions-v21">
               <label className="check-label-v22 notification-publish-toggle-v37"><input type="checkbox" checked={Boolean(form.send_push_notification)} onChange={(e) => setForm({ ...form, send_push_notification: e.target.checked })}/>{isArabic ? "إرسال إشعار" : "Notify subscribers"}</label>
               {isSuperAdmin && form.id && <button className="button danger" onClick={deleteMonth} title={isArabic ? "حذف الشهر نهائيًا" : "Permanently delete month"}><Trash2 size={15}/></button>}
-              {isSuperAdmin && <button className="button subtle" disabled={!form?.holdings?.length} onClick={() => setReportOpen(true)}><FileText size={16}/>Generate Portfolio Report</button>}
+              {isSuperAdmin && form.id && !form.is_closed && <button className="button subtle" onClick={openEventEditor}><History size={16}/>{isArabic ? "إجراء منتصف الشهر" : "Mid-month action"}</button>}{isSuperAdmin && <button className="button subtle" disabled={!form?.holdings?.length} onClick={() => setReportOpen(true)}><FileText size={16}/>Generate Portfolio Report</button>}
               <button className="button subtle" disabled={saving || !selectedPortfolioId} onClick={() => persistMonth({ publish: false })}><Save size={16}/>{t("saveDraft")}</button>
               <button className="button gold" disabled={saving || !selectedPortfolioId} onClick={() => persistMonth({ publish: true })}><Send size={16}/>{t("publishUpdate")}</button>
               <button className="button green" disabled={saving || form.is_closed || !selectedPortfolioId} onClick={() => persistMonth({ publish: true, close: true })}>{t("closeMonth")}</button>
@@ -435,25 +533,30 @@ export default function AdminDashboard() {
             </article>
 
             <article className="panel-v21 holdings-editor-v21">
-              <div className="panel-heading-v21"><div><span className="eyebrow">PORTFOLIO</span><h2>{t("officialPortfolio")}</h2><p>{isArabic ? "يمكن إضافة أو حذف أي عدد من الأسهم. مجموع الأوزان لازم يساوي 100%." : "Add or remove any number of holdings. Total weights must equal 100%."}</p></div><div className="editor-buttons-v22"><button className="button subtle compact" onClick={addHolding}><Plus size={14}/>{isArabic ? "سهم" : "Holding"}</button><button className="button subtle compact" onClick={equalise}>{t("equalise")}</button></div></div>
+              <div className="panel-heading-v21"><div><span className="eyebrow">PORTFOLIO</span><h2>{t("officialPortfolio")}</h2><p>{form.portfolio_events?.length ? (isArabic ? "تم قفل تكوين بداية الشهر بعد تسجيل أول حدث. أي تغيير لاحق يتم من سجل الأحداث للحفاظ على التاريخ." : "Opening allocation is locked after the first event. Use the event ledger for later changes to preserve history.") : (isArabic ? "يمكن إضافة أو حذف أي عدد من الأسهم. مجموع الأوزان لازم يساوي 100%." : "Add or remove any number of holdings. Total weights must equal 100%.")}</p></div><div className="editor-buttons-v22"><button className="button subtle compact" disabled={Boolean(form.portfolio_events?.length)} onClick={addHolding}><Plus size={14}/>{isArabic ? "سهم" : "Holding"}</button><button className="button subtle compact" disabled={Boolean(form.portfolio_events?.length)} onClick={equalise}>{t("equalise")}</button></div></div>
               <div className="table-scroll">
                 <table className="data-table-v21 admin-data-table">
                   <thead><tr><th>{t("ticker")}</th><th>{t("weight")}</th><th>{t("open")}</th><th>{t("latest")}</th><th>{t("return")}</th><th>{t("contribution")}</th><th>{isArabic ? "الفكرة الاستثمارية" : "Investment thesis"}</th><th></th></tr></thead>
                   <tbody>{form.holdings.map((holding, index) => {
                     const calculated = metrics.rows[index] || {};
                     return <tr key={holding.id || holding.local_id}>
-                      <td><input className="admin-table-input ticker" value={holding.ticker} onChange={(e) => updateHolding(index, "ticker", e.target.value)}/></td>
-                      <td><input className="admin-table-input" type="number" step=".01" value={holding.weight} onChange={(e) => updateHolding(index, "weight", e.target.value)}/></td>
-                      <td><input className="admin-table-input" type="number" step=".01" value={holding.open_price} onChange={(e) => updateHolding(index, "open_price", e.target.value)}/></td>
+                      <td><input className="admin-table-input ticker" disabled={Boolean(form.portfolio_events?.length)} value={holding.ticker} onChange={(e) => updateHolding(index, "ticker", e.target.value)}/></td>
+                      <td><input className="admin-table-input" disabled={Boolean(form.portfolio_events?.length)} type="number" step=".01" value={holding.weight} onChange={(e) => updateHolding(index, "weight", e.target.value)}/></td>
+                      <td><input className="admin-table-input" disabled={Boolean(form.portfolio_events?.length)} type="number" step=".01" value={holding.open_price} onChange={(e) => updateHolding(index, "open_price", e.target.value)}/></td>
                       <td><input className="admin-table-input" type="number" step=".01" value={holding.close_price} onChange={(e) => updateHolding(index, "close_price", e.target.value)}/></td>
                       <td className={calculated.mtd >= 0 ? "positive" : "negative"}>{formatPercent(calculated.mtd)}</td>
                       <td className={calculated.contribution >= 0 ? "positive" : "negative"}>{formatPercent(calculated.contribution)}</td>
                       <td><textarea className="admin-table-thesis-v31" rows="2" value={holding.investment_thesis || ""} onChange={(e) => updateHolding(index, "investment_thesis", e.target.value)} placeholder={isArabic ? "لماذا اخترنا هذا السهم؟" : "Why is this stock selected?"}/></td>
-                      <td><button className="icon-button" onClick={() => removeHolding(index)}><Trash2 size={14}/></button></td>
+                      <td><button className="icon-button" disabled={Boolean(form.portfolio_events?.length)} onClick={() => removeHolding(index)}><Trash2 size={14}/></button></td>
                     </tr>;
                   })}</tbody>
                 </table>
               </div>
+            </article>
+
+            <article className="panel-v21 padded-v21 portfolio-event-ledger-v313">
+              <div className="panel-heading-v21"><div><span className="eyebrow">EVENT-DRIVEN PORTFOLIO</span><h2>{isArabic ? "سجل أحداث المحفظة" : "Portfolio events & performance freezing"}</h2><p>{isArabic ? "كل تخارج أو إعادة توازن يحدد نقطة سعر ثابتة ويقسم الشهر إلى فترات أداء مستقلة." : "Every exit or rebalance freezes an execution point and splits the month into independently compounded performance segments."}</p></div>{form.id && !form.is_closed && <button className="button gold compact" onClick={openEventEditor}><Plus size={14}/>{isArabic ? "إجراء استثنائي" : "Add event"}</button>}</div>
+              <div className="portfolio-event-list-v313">{[...(form.portfolio_events || [])].sort((a,b)=>String(b.event_date||"").localeCompare(String(a.event_date||""))||Number(b.sequence_no||0)-Number(a.sequence_no||0)).map((event)=><article key={event.id}><div className="portfolio-event-date-v313"><b>{new Date(`${event.event_date}T12:00:00`).toLocaleDateString(locale)}</b><small>#{event.sequence_no}</small></div><div><span className="status-pill live">{String(event.event_type||"").replaceAll("_"," ")}</span><h3>{event.title || event.affected_ticker || (isArabic ? "إجراء محفظة" : "Portfolio action")}</h3><p>{event.reason}</p><small>{isArabic ? "التوزيع بعد الحدث" : "Post-event allocation"}: {(event.portfolio_event_allocations||[]).map((item)=>`${item.ticker} ${Number(item.weight_pct||0).toFixed(1)}%`).join(" · ")}</small></div>{isSuperAdmin && <button className="icon-button" onClick={()=>deletePortfolioEvent(event.id)}><Trash2 size={14}/></button>}</article>)}{!(form.portfolio_events||[]).length&&<p className="muted-copy-v21">{isArabic ? "لا توجد أحداث استثنائية. الحساب ما زال يعتمد على تكوين بداية الشهر." : "No exceptional events. The month still follows its opening allocation."}</p>}</div>
             </article>
 
             <article className="panel-v21 padded-v21 decision-editor-v21">
@@ -508,6 +611,7 @@ export default function AdminDashboard() {
           </section>
         </main>
       </div>
+      {eventEditorOpen && <div className="portfolio-event-modal-v313"><div className="portfolio-event-dialog-v313 panel-v21"><header><div><span className="eyebrow">MID-MONTH ACTION</span><h2>{isArabic ? "تسجيل قرار استثنائي" : "Record exceptional portfolio action"}</h2><p>{isArabic ? "النتيجة بعد الحفظ تصبح جزءًا دائمًا من حساب الأداء والـAudit Trail." : "Once saved, this becomes a permanent performance segment and audit-trail event."}</p></div><button className="icon-button" onClick={()=>setEventEditorOpen(false)}><X size={18}/></button></header><div className="portfolio-event-form-v313"><label>{isArabic ? "تاريخ التنفيذ" : "Execution date"}<input type="date" value={eventForm.event_date} onChange={(e)=>setEventForm({...eventForm,event_date:e.target.value})}/></label><label>{isArabic ? "نوع الإجراء" : "Action type"}<select value={eventForm.event_type} onChange={(e)=>setEventType(e.target.value)}><option value="exit_to_cash">Exit → Cash</option><option value="exit_redistribute">Exit → Redistribute</option><option value="rebalance">Rebalance</option><option value="entry">Entry</option><option value="manual">Manual allocation</option></select></label><label>{isArabic ? "السهم المتأثر" : "Affected ticker"}<select value={eventForm.affected_ticker} onChange={(e)=>changeAffectedTicker(e.target.value)}><option value="">—</option>{eventBaseAllocations().filter((item)=>item.ticker!=="CASH").map((item)=><option key={item.ticker} value={item.ticker}>{item.ticker}</option>)}</select></label><label>{isArabic ? "سعر التنفيذ" : "Execution price"}<input type="number" step=".01" value={eventForm.execution_price} onChange={(e)=>setEventForm({...eventForm,execution_price:Number(e.target.value)})}/></label><label className="wide">{isArabic ? "سبب القرار / التفسير للمستثمر" : "Reason / investor explanation"}<textarea rows="4" value={eventForm.reason} onChange={(e)=>setEventForm({...eventForm,reason:e.target.value})} placeholder={isArabic ? "مثال: تم تحقيق المستهدف السعري بالكامل وتم التخارج لتثبيت الربح." : "Example: Target achieved; position exited to lock in the gain."}/></label></div><div className="portfolio-event-allocation-head-v313"><div><b>{isArabic ? "التوزيع بعد التنفيذ" : "Allocation immediately after execution"}</b><small>{isArabic ? "لازم يساوي 100% بما في ذلك CASH." : "Must total 100%, including CASH."}</small></div><div><button className="button subtle compact" onClick={equalizeEventAllocations}>{isArabic ? "توزيع متساوي" : "Equalize"}</button><button className="button subtle compact" onClick={addEventAllocation}><Plus size={13}/>{isArabic ? "أصل" : "Asset"}</button></div></div><div className="portfolio-event-allocation-grid-v313">{eventForm.allocations.map((item,index)=><div key={`${item.ticker}-${index}`}><input value={item.ticker} disabled={item.ticker==="CASH"} placeholder="Ticker / CASH" onChange={(e)=>updateEventAllocation(index,"ticker",e.target.value)}/><label><input type="number" step=".01" value={item.weight_pct} onChange={(e)=>updateEventAllocation(index,"weight_pct",e.target.value)}/><span>%</span></label><button className="icon-button" onClick={()=>removeEventAllocation(index)}><X size={14}/></button></div>)}</div><div className="portfolio-event-total-v313"><span>{isArabic ? "إجمالي الوزن" : "Total weight"}</span><b className={Math.abs(eventForm.allocations.reduce((sum,item)=>sum+Number(item.weight_pct||0),0)-100)<=.01?"positive":"negative"}>{eventForm.allocations.reduce((sum,item)=>sum+Number(item.weight_pct||0),0).toFixed(2)}%</b></div><label className="check-label-v22"><input type="checkbox" checked={Boolean(eventForm.notify_followers)} onChange={(e)=>setEventForm({...eventForm,notify_followers:e.target.checked})}/>{isArabic ? "إرسال إشعار لمتابعي هذه المحفظة فقط" : "Notify followers of this portfolio only"}</label><footer><button className="button subtle" onClick={()=>setEventEditorOpen(false)}>{isArabic ? "إلغاء" : "Cancel"}</button><button className="button gold" disabled={eventSaving} onClick={savePortfolioEvent}><Save size={15}/>{eventSaving?(isArabic?"جاري الحفظ…":"Saving…"):(isArabic?"تثبيت الحدث":"Freeze event")}</button></footer></div></div>}
       {isSuperAdmin && <PortfolioReportStudio open={reportOpen} onClose={() => setReportOpen(false)} portfolio={currentPortfolio} month={form} months={portfolioMonths} isArabic={isArabic} locale={locale} onMessage={setMessage}/>}
     </div>
   );
@@ -519,6 +623,7 @@ function normalise(month) {
     holdings: [...(month.holdings || [])].sort((a, b) => Number(a.sort_order) - Number(b.sort_order)),
     swaps: month.swaps || [],
     snapshots: month.snapshots || [],
+    portfolio_events: (month.portfolio_events || []).map((event) => ({ ...event, portfolio_event_allocations: event.portfolio_event_allocations || [] })),
   };
 }
 

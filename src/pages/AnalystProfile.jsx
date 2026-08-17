@@ -16,7 +16,7 @@ async function loadAnalyst(id) {
   const [profileResult, portfolioResult, monthResult, recommendationResult, reportResult, priceResult] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
     supabase.from("portfolios").select("*").eq("created_by", id).eq("is_published", true).order("created_at", { ascending: false }),
-    supabase.from("strategy_months").select("*, holdings(*)").eq("is_published", true).order("month_key", { ascending: true }),
+    supabase.from("strategy_months").select("*, holdings(*), portfolio_events(*, portfolio_event_allocations(*))").eq("is_published", true).order("month_key", { ascending: true }),
     supabase.from("recommendations").select("*").eq("created_by", id).eq("is_published", true).order("recommendation_date", { ascending: false }),
     supabase.from("weekly_reports").select("*").eq("created_by", id).eq("is_published", true).order("week_end", { ascending: false }),
     supabase.from("market_prices").select("ticker, company_name, close_price, price_date"),

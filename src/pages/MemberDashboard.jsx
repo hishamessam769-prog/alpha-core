@@ -33,7 +33,7 @@ const allocationColours = ["#20d3ff", "#8b5cf6", "#2dd4bf", "#60a5fa", "#f97316"
 async function loadPublishedData() {
   const [portfolioResult, monthResult, recommendationResult, reportResult, priceResult] = await Promise.all([
     supabase.from("portfolios").select("*").eq("is_published", true).order("created_at", { ascending: true }),
-    supabase.from("strategy_months").select("*, holdings(*), swaps(*), snapshots(*)").eq("is_published", true).order("month_key", { ascending: true }),
+    supabase.from("strategy_months").select("*, holdings(*), swaps(*), snapshots(*), portfolio_events(*, portfolio_event_allocations(*))").eq("is_published", true).order("month_key", { ascending: true }),
     supabase.from("recommendations").select("*").eq("is_published", true).order("recommendation_date", { ascending: false }),
     supabase.from("weekly_reports").select("*").eq("is_published", true).order("week_end", { ascending: false }).limit(4),
     supabase.from("market_prices").select("ticker, company_name, close_price, price_date"),
@@ -114,6 +114,8 @@ export default function MemberDashboard() {
       .channel("alpha-platform-members-v3")
       .on("postgres_changes", { event: "*", schema: "public", table: "portfolios" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "strategy_months" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "portfolio_events" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "portfolio_event_allocations" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "holdings" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "swaps" }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "recommendations" }, refresh)
@@ -149,8 +151,9 @@ export default function MemberDashboard() {
   const recommendationByTicker = useMemo(() => Object.fromEntries(recommendations.map((item) => [String(item.ticker).toUpperCase(), item])), [recommendations]);
   const latestRecommendation = recommendations[0] || null;
   const latestReport = reports[0] || null;
-  const bestHolding = [...(metrics.rows || [])].sort((a, b) => Number(b.mtd || 0) - Number(a.mtd || 0))[0];
-  const worstHolding = [...(metrics.rows || [])].sort((a, b) => Number(a.mtd || 0) - Number(b.mtd || 0))[0];
+  const investableRows = (metrics.rows || []).filter((row) => !row.is_cash);
+  const bestHolding = [...investableRows].sort((a, b) => Number(b.mtd || 0) - Number(a.mtd || 0))[0];
+  const worstHolding = [...investableRows].sort((a, b) => Number(a.mtd || 0) - Number(b.mtd || 0))[0];
   const portfolioTitle = isArabic && currentPortfolio?.name_ar ? currentPortfolio.name_ar : currentPortfolio?.name;
   const portfolioAuthor = profiles.find((item) => item.id === currentPortfolio?.created_by) || null;
   const calculatedPeak = useMemo(() => trackRecord.reduce((best, row) => {
@@ -311,7 +314,7 @@ export default function MemberDashboard() {
           </section>
 
           <section className="smart-holdings-section-v343 panel-v21">
-            <div className="panel-heading-v21 smart-holdings-heading-v343"><div><span className="eyebrow">STOCK IMPACT MAP</span><h2>{isArabic ? "تأثير مكونات المحفظة" : "Portfolio impact by holding"}</h2><p>{isArabic ? "كل سهم يظهر مرة واحدة فقط مع السعر الافتتاحي والحالي وتأثيره والفكرة الاستثمارية." : "Each holding appears once, with its opening price, current price, exact contribution and investment thesis."}</p></div><span className={`status-pill ${selected.is_closed ? "final" : "live"}`}>{selected.is_closed ? t("final") : t("live")}</span></div>
+            <div className="panel-heading-v21 smart-holdings-heading-v343"><div><span className="eyebrow">STOCK IMPACT MAP</span><h2>{isArabic ? "تأثير مكونات المحفظة" : "Portfolio impact by holding"}</h2><p>{isArabic ? "كل مركز حالي يظهر مرة واحدة. السهم الذي تم التخارج منه يختفي بعد التنفيذ وتظل نتيجته مجمدة داخل الخط الزمني." : "Each current holding appears once. Mid-month exits disappear after execution and their result remains frozen in the timeline."}</p></div><span className={`status-pill ${selected.is_closed ? "final" : "live"}`}>{selected.is_closed ? t("final") : t("live")}</span></div>
             <div className="smart-holdings-grid-v343">{metrics.rows.map((row, index) => {
               const research = recommendationByTicker[String(row.ticker).toUpperCase()];
               const company = prices[String(row.ticker).toUpperCase()]?.company_name || research?.company_name || row.company_name || row.ticker;
@@ -346,7 +349,7 @@ export default function MemberDashboard() {
 
           <section className="dashboard-detail-grid commentary-grid-v3">
             <article className="panel-v21 padded-v21"><span className="eyebrow">PORTFOLIO COMMENTARY</span><h2>{selected.update_title || `${monthLabel(selected.month_key, false, locale)} — ${t("monthlyUpdate")}`}</h2><p className="long-copy-v21">{selected.public_commentary || t("dashboardSubtitle")}</p><div className="objective-card-v21"><small>{t("objective")}</small><p>{selected.monthly_objective || "—"}</p></div></article>
-            <article className="panel-v21 padded-v21"><span className="eyebrow">DECISION TIMELINE</span><h2>{t("decisionLog")}</h2><div className="decision-list-v21">{selected.swaps?.length ? selected.swaps.map((swap) => <article key={swap.id}><div><b className="removed-chip">{swap.removed_ticker}</b><span>→</span><b className="added-chip">{swap.added_ticker}</b></div><p>{swap.reason || "—"}</p></article>) : <p className="muted-copy-v21">{t("noChanges")}</p>}</div></article>
+            <article className="panel-v21 padded-v21 portfolio-public-timeline-v313"><span className="eyebrow">DECISION TIMELINE</span><h2>{isArabic ? "سجل القرارات والتنفيذ" : "Decision & execution timeline"}</h2><p className="muted-copy-v21">{isArabic ? "الأحداث الاستثنائية مؤرخة بسعر التنفيذ والتوزيع اللاحق، لذلك يمكن مراجعة أثر كل قرار لاحقًا." : "Exceptional actions are permanently dated with execution price and post-event allocation, so every decision remains auditable."}</p><div className="portfolio-public-events-v313">{[...(selected.portfolio_events || [])].sort((a,b)=>String(b.event_date||"").localeCompare(String(a.event_date||""))||Number(b.sequence_no||0)-Number(a.sequence_no||0)).map((event)=><article key={event.id}><div className="portfolio-public-event-rail-v313"><span/><b>{new Date(`${event.event_date}T12:00:00`).toLocaleDateString(locale,{day:"2-digit",month:"short"})}</b><i/></div><div className="portfolio-public-event-body-v313"><header><span className="status-pill live">{String(event.event_type||"").replaceAll("_"," ")}</span>{event.affected_ticker&&<b className="ticker-chip">{event.affected_ticker}</b>}</header><h3>{event.title || (isArabic ? "إجراء استثنائي" : "Portfolio action")}</h3><p>{event.reason}</p><div className="portfolio-public-event-meta-v313">{event.execution_price&&<span><small>{isArabic ? "سعر التنفيذ" : "Execution"}</small><b>{formatNumber(event.execution_price,2,locale)}</b></span>}<span><small>{isArabic ? "التوزيع بعد القرار" : "After action"}</small><b>{(event.portfolio_event_allocations||[]).map((item)=>`${item.ticker} ${formatNumber(item.weight_pct,1,locale)}%`).join(" · ")}</b></span></div></div></article>)}{selected.swaps?.map((swap)=><article key={`swap-${swap.id}`} className="legacy-swap-v313"><div className="portfolio-public-event-rail-v313"><span/><b>LEGACY</b><i/></div><div className="portfolio-public-event-body-v313"><header><b className="removed-chip">{swap.removed_ticker}</b><span>→</span><b className="added-chip">{swap.added_ticker}</b></header><p>{swap.reason || "—"}</p></div></article>)}{!(selected.portfolio_events||[]).length&&!selected.swaps?.length&&<p className="muted-copy-v21">{t("noChanges")}</p>}</div></article>
           </section>
 
           <section className="guidance-v21 guidance-v3"><div><span className="eyebrow">INVESTOR GUIDANCE</span><h2>{selected.investor_guidance_title || t("investorGuidance")}</h2><p>{selected.investor_guidance || "—"}</p></div><div className="best-worst-v3"><article><TrendingUp/><span><small>{isArabic ? "أفضل سهم" : "Best performer"}</small><b>{bestHolding?.ticker || "—"}</b><em className="positive">{formatPercent(bestHolding?.mtd)}</em></span></article><article><TrendingDown/><span><small>{isArabic ? "أضعف سهم" : "Worst performer"}</small><b>{worstHolding?.ticker || "—"}</b><em className="negative">{formatPercent(worstHolding?.mtd)}</em></span></article></div></section>

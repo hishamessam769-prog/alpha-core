@@ -20,10 +20,12 @@ import AuthorAttribution from "../components/AuthorAttribution";
 import CompanyMark from "../components/CompanyMark";
 import DashboardHeader from "../components/DashboardHeader";
 import FinancialFreedomSimulator from "../components/FinancialFreedomSimulator";
+import { MarketIndicesBar } from "../components/MarketGraphic";
 import Reveal from "../components/Reveal";
 import { useLanguage } from "../context/LanguageContext";
 import {
   buildMonthlyTrackRecord,
+  calculateMonth,
   dateTimeLabel,
   formatNumber,
   formatPercent,
@@ -37,7 +39,7 @@ import { supabase } from "../lib/supabase";
 async function loadPortalData() {
   const [portfolioResult, monthResult, recommendationResult, reportResult, priceResult, profileResult, updateResult, peakResult] = await Promise.all([
     supabase.from("portfolios").select("*").eq("is_published", true).order("updated_at", { ascending: false }),
-    supabase.from("strategy_months").select("*, holdings(*)").eq("is_published", true).order("month_key", { ascending: true }),
+    supabase.from("strategy_months").select("*, holdings(*), portfolio_events(*, portfolio_event_allocations(*))").eq("is_published", true).order("month_key", { ascending: true }),
     supabase.from("recommendations").select("*").eq("is_published", true).order("recommendation_date", { ascending: false }),
     supabase.from("weekly_reports").select("*").eq("is_published", true).order("week_end", { ascending: false }).limit(12),
     supabase.from("market_prices").select("ticker, company_name, close_price, price_date"),
@@ -86,6 +88,8 @@ export default function HomePortal() {
       .channel("alpha-home-portal-v38")
       .on("postgres_changes", { event: "*", schema: "public", table: "portfolios" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "strategy_months" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "portfolio_events" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "portfolio_event_allocations" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "recommendations" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "weekly_reports" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "market_prices" }, load)
@@ -106,7 +110,7 @@ export default function HomePortal() {
       portfolio,
       latest,
       latestMonth,
-      holdingsCount: latestMonth?.holdings?.length || 0,
+      holdingsCount: latestMonth ? calculateMonth(latestMonth).rows.filter((row) => !row.is_cash).length : 0,
       peak: data.peaks[portfolio.id] || null,
       author: profileMap[portfolio.created_by],
     };
@@ -120,6 +124,7 @@ export default function HomePortal() {
   return (
     <div className="dashboard-shell home-portal-shell-v38">
       <DashboardHeader />
+      <MarketIndicesBar isArabic={isArabic} locale={locale}/>
       {message && <div className="notice-bar">{message}</div>}
       <main className="home-portal-v38">
         <Reveal as="section" className="home-portal-hero-v38">

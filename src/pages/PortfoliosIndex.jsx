@@ -6,14 +6,14 @@ import DashboardHeader from "../components/DashboardHeader";
 import MarketGraphic from "../components/MarketGraphic";
 import Reveal from "../components/Reveal";
 import { useLanguage } from "../context/LanguageContext";
-import { buildMonthlyTrackRecord, dateTimeLabel, formatPercent, monthLabel } from "../lib/calculations";
+import { buildMonthlyTrackRecord, calculateMonth, dateTimeLabel, formatPercent, monthLabel } from "../lib/calculations";
 import { mapProfiles } from "../lib/content";
 import { supabase } from "../lib/supabase";
 
 async function loadPortfolioIndex() {
   const [portfolioResult, monthResult, profileResult] = await Promise.all([
     supabase.from("portfolios").select("*").eq("is_published", true).order("created_at", { ascending: true }),
-    supabase.from("strategy_months").select("*, holdings(*)").eq("is_published", true).order("month_key", { ascending: true }),
+    supabase.from("strategy_months").select("*, holdings(*), portfolio_events(*, portfolio_event_allocations(*))").eq("is_published", true).order("month_key", { ascending: true }),
     supabase.from("profiles").select("*"),
   ]);
   const error = portfolioResult.error || monthResult.error;
@@ -46,7 +46,7 @@ export default function PortfoliosIndex() {
       latest,
       latestMonth,
       author: profileMap[portfolio.created_by],
-      holdings: latestMonth?.holdings?.length || 0,
+      holdings: latestMonth ? calculateMonth(latestMonth).rows.filter((row) => !row.is_cash).length : 0,
     };
   }), [data.portfolios, data.months, profileMap, locale]);
 
