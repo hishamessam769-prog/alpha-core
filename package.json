@@ -1,7 +1,7 @@
 {
-  "name": "alpha-platform-v3-11-6-journal-save-crash-hotfix",
+  "name": "alpha-platform-v3-11-8-journal-hydration-gate",
   "private": true,
-  "version": "3.11.7",
+  "version": "3.11.8",
   "type": "module",
   "scripts": {
     "dev": "vite",

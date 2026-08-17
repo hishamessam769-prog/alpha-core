@@ -253,12 +253,15 @@ class JournalPageErrorBoundary extends Component {
 }
 
 function MyJournalContent() {
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const { isArabic } = useLanguage();
   const locale = isArabic ? "ar-EG" : "en-EG";
   const [settings, setSettings] = useState(null);
   const [snapshots, setSnapshots] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+  const [displayReady, setDisplayReady] = useState(false);
+  const [initialLoadError, setInitialLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [timeframe, setTimeframe] = useState("ALL");
@@ -273,9 +276,14 @@ function MyJournalContent() {
   const [ocrStatus, setOcrStatus] = useState("");
   const [ocrBusy, setOcrBusy] = useState(false);
 
-  const load = async () => {
+  const load = async ({ initial = false } = {}) => {
+    if (!session?.access_token) return false;
     try {
-      setLoading(true);
+      if (initial) {
+        setLoading(true);
+        setDisplayReady(false);
+        setInitialLoadError("");
+      }
       const payload = await journalRequest(session);
       const safeSnapshots = Array.isArray(payload.snapshots)
         ? payload.snapshots.map(normalizeJournalSnapshot).filter(Boolean)
@@ -290,18 +298,67 @@ function MyJournalContent() {
       } else {
         setShowSettings(true);
       }
+      if (initial) setInitialLoadError("");
       setMessage("");
       return true;
     } catch (error) {
       console.error("Journal load failed:", error);
-      setMessage(localizeError(error.message || String(error), isArabic));
+      const detail = localizeError(error.message || String(error), isArabic);
+      if (initial) setInitialLoadError(detail);
+      else setMessage(detail);
       return false;
     } finally {
-      setLoading(false);
+      if (initial) {
+        setLoading(false);
+        setInitialDataLoaded(true);
+      }
     }
   };
 
-  useEffect(() => { load(); }, [session?.access_token]);
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!session?.access_token) {
+      setLoading(false);
+      setInitialLoadError(isArabic ? "يجب تسجيل الدخول لفتح السجل الخاص." : "Sign in to open your private journal.");
+      setInitialDataLoaded(true);
+      return;
+    }
+
+    setInitialDataLoaded(false);
+    setDisplayReady(false);
+    load({ initial: true });
+  }, [authLoading, session?.access_token]);
+
+  // Keep the real dashboard mounted but invisible while its data, calculations,
+  // fonts and chart layout settle. This prevents the default 0 EGP state from
+  // ever being painted to the user, while still giving Recharts real dimensions.
+  useEffect(() => {
+    if (!initialDataLoaded || initialLoadError) return;
+    let cancelled = false;
+    let frameOne = 0;
+    let frameTwo = 0;
+
+    const revealAfterPaint = () => {
+      frameOne = window.requestAnimationFrame(() => {
+        frameTwo = window.requestAnimationFrame(() => {
+          if (!cancelled) setDisplayReady(true);
+        });
+      });
+    };
+
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(revealAfterPaint).catch(revealAfterPaint);
+    } else {
+      revealAfterPaint();
+    }
+
+    return () => {
+      cancelled = true;
+      if (frameOne) window.cancelAnimationFrame(frameOne);
+      if (frameTwo) window.cancelAnimationFrame(frameTwo);
+    };
+  }, [initialDataLoaded, initialLoadError]);
 
   const analytics = useMemo(() => calculateJournalAnalytics({
     snapshots,
@@ -456,7 +513,7 @@ function MyJournalContent() {
 
       // Refresh from the database instead of relying on a potentially malformed
       // optimistic state update. If a visual component fails, the DB row is safe.
-      const refreshed = await load();
+      const refreshed = await load({ initial: false });
       setMessage(refreshed
         ? (isArabic ? "تم حفظ القراءة اليومية بنجاح." : "Daily snapshot saved successfully.")
         : (isArabic ? "تم حفظ القراءة في قاعدة البيانات، لكن تعذر تحديث الشاشة الآن. أعد فتح الصفحة." : "The snapshot was saved to the database, but the screen could not refresh. Reopen the page."));
@@ -508,8 +565,25 @@ function MyJournalContent() {
   return (
     <div className="dashboard-shell journal-shell">
       <DashboardHeader />
-      {message && <div className="notice-bar journal-notice">{message}</div>}
-      <main className="journal-page">
+      {!displayReady && !initialLoadError && <div className="journal-hydration-overlay" role="status" aria-live="polite">
+        <div className="journal-hydration-card">
+          <span className="journal-hydration-orb"><RefreshCw size={24}/></span>
+          <span className="eyebrow">PRIVATE · PERSONAL PERFORMANCE JOURNAL</span>
+          <h2>{isArabic ? "جاري تجهيز سجل محفظتك…" : "Preparing your private journal…"}</h2>
+          <p>{isArabic ? "نزامن رأس مال البداية والقراءات ونحسب الأداء قبل عرض أي أرقام." : "Syncing your baseline, snapshots and analytics before showing any figures."}</p>
+          <div className="journal-hydration-bars" aria-hidden="true"><i/><i/><i/></div>
+        </div>
+      </div>}
+      {initialLoadError && initialDataLoaded && <main className="journal-load-error">
+        <section className="journal-entry-card">
+          <span className="eyebrow">PRIVATE JOURNAL · LOAD ERROR</span>
+          <h2>{isArabic ? "تعذر تحميل بيانات السجل" : "Could not load journal data"}</h2>
+          <p>{initialLoadError}</p>
+          <button className="button primary" type="button" onClick={() => { setInitialDataLoaded(false); setDisplayReady(false); load({ initial: true }); }}><RefreshCw size={16}/>{isArabic ? "إعادة المحاولة" : "Try again"}</button>
+        </section>
+      </main>}
+      {message && displayReady && <div className="notice-bar journal-notice">{message}</div>}
+      <main className={`journal-page journal-dashboard-content ${displayReady ? "is-ready" : "is-hydrating"}`} aria-busy={!displayReady}>
         <Reveal as="section" className="journal-hero">
           <div className="journal-hero-copy">
             <span className="eyebrow">PRIVATE · PERSONAL PERFORMANCE JOURNAL</span>
@@ -612,7 +686,7 @@ function MyJournalContent() {
         <section className="journal-methodology-note"><ShieldCheck/><div><b>{isArabic ? "ملاحظة منهجية" : "Methodology note"}</b><p>{isArabic ? "التذبذب محسوب كإنحراف معياري لعوائد الجلسات ومُسنّن باستخدام √252. مؤشر العائد مقابل التذبذب استرشادي ويستخدم متوسط العائد اليومي السنوي مع معدل خالٍ من المخاطر = صفر. لا يتم دمج أي من هذه البيانات مع نتائج المحافظ العامة للمنصة." : "Volatility is the sample standard deviation of session returns annualised using √252. The return-to-volatility indicator is indicative and uses annualised mean daily return with a zero risk-free rate. None of this private data is merged into ALPHA’s public portfolio performance."}</p></div></section>
       </main>
 
-      {showSettings && <div className="journal-modal-overlay" role="dialog" aria-modal="true" onMouseDown={(event) => event.currentTarget === event.target && setShowSettings(false)}><form className="journal-settings-modal" onSubmit={saveBaseline}><header><div><span className="eyebrow">PRIVATE SETTINGS</span><h2>{isArabic ? "إعداد رأس مال البداية" : "Starting capital settings"}</h2></div>{settings && <button type="button" className="journal-icon-button" onClick={() => setShowSettings(false)}><X/></button>}</header><p>{isArabic ? "هذا الرقم هو نقطة البداية لحساب النمو الكلي. يمكنك تعديله لاحقًا، لكن تغييره سيعيد تفسير الأداء التاريخي." : "This number is the baseline used to measure your total growth. You can edit it later, but changing it will reinterpret historical performance."}</p><label><span>{isArabic ? "رأس المال الأولي" : "Initial capital"}</span><input autoFocus type="number" step="0.01" inputMode="decimal" value={baselineForm.capital} onChange={(event) => setBaselineForm((current) => ({ ...current, capital: event.target.value }))}/><em>{baselinePreview}</em></label><label><span>{isArabic ? "تاريخ البداية (اختياري)" : "Baseline date (optional)"}</span><input type="date" value={baselineForm.date} onChange={(event) => setBaselineForm((current) => ({ ...current, date: event.target.value }))}/></label><button className="button primary full" disabled={saving}><Save/>{saving ? (isArabic ? "جاري الحفظ…" : "Saving…") : (isArabic ? "حفظ رأس مال البداية" : "Save baseline")}</button></form></div>}
+      {displayReady && showSettings && <div className="journal-modal-overlay" role="dialog" aria-modal="true" onMouseDown={(event) => event.currentTarget === event.target && setShowSettings(false)}><form className="journal-settings-modal" onSubmit={saveBaseline}><header><div><span className="eyebrow">PRIVATE SETTINGS</span><h2>{isArabic ? "إعداد رأس مال البداية" : "Starting capital settings"}</h2></div>{settings && <button type="button" className="journal-icon-button" onClick={() => setShowSettings(false)}><X/></button>}</header><p>{isArabic ? "هذا الرقم هو نقطة البداية لحساب النمو الكلي. يمكنك تعديله لاحقًا، لكن تغييره سيعيد تفسير الأداء التاريخي." : "This number is the baseline used to measure your total growth. You can edit it later, but changing it will reinterpret historical performance."}</p><label><span>{isArabic ? "رأس المال الأولي" : "Initial capital"}</span><input autoFocus type="number" step="0.01" inputMode="decimal" value={baselineForm.capital} onChange={(event) => setBaselineForm((current) => ({ ...current, capital: event.target.value }))}/><em>{baselinePreview}</em></label><label><span>{isArabic ? "تاريخ البداية (اختياري)" : "Baseline date (optional)"}</span><input type="date" value={baselineForm.date} onChange={(event) => setBaselineForm((current) => ({ ...current, date: event.target.value }))}/></label><button className="button primary full" disabled={saving}><Save/>{saving ? (isArabic ? "جاري الحفظ…" : "Saving…") : (isArabic ? "حفظ رأس مال البداية" : "Save baseline")}</button></form></div>}
       <PlatformFooter/>
     </div>
   );
