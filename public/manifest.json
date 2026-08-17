@@ -5,7 +5,7 @@
   "description": "Institutional Egyptian equity intelligence, portfolios, recommendations, research and market updates.",
   "lang": "en",
   "dir": "auto",
-  "start_url": "/dashboard?source=pwa&version=3.11.5",
+  "start_url": "/dashboard?source=pwa&version=3.12.0",
   "scope": "/",
   "display": "standalone",
   "display_override": [
@@ -106,6 +106,18 @@
       "name": "Personal Portfolio Journal",
       "short_name": "My Journal",
       "url": "/my-journal?source=shortcut",
+      "icons": [
+        {
+          "src": "/icons/alpha-core-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "My Virtual Portfolios",
+      "short_name": "My Portfolios",
+      "url": "/my-portfolios?source=shortcut",
       "icons": [
         {
           "src": "/icons/alpha-core-192.png",

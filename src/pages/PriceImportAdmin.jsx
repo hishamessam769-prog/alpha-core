@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Download, FileSpreadsheet, Layers3, RefreshCw, UploadCloud, XCircle } from "lucide-react";
+import { CheckCircle2, Database, Download, FileSpreadsheet, Layers3, Pencil, Plus, Power, RefreshCw, Save, UploadCloud, X, XCircle } from "lucide-react";
 import * as XLSX from "xlsx";
 import DashboardHeader from "../components/DashboardHeader";
+import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 import { formatNumber } from "../lib/calculations";
 import { supabase } from "../lib/supabase";
@@ -9,233 +10,102 @@ import { dispatchQueuedPushNotifications } from "../lib/pushNotifications";
 
 const aliases = {
   ticker: ["ticker", "symbol", "code", "اسم السهم", "رمز السهم", "الرمز"],
-  company: ["company", "company name", "name", "اسم الشركة"],
+  company: ["company", "company name", "name", "asset name", "اسم الشركة", "اسم الأصل"],
+  companyAr: ["name ar", "arabic name", "company ar", "الاسم بالعربي", "اسم عربي"],
+  type: ["type", "asset type", "نوع الأصل", "النوع"],
+  sector: ["sector", "القطاع"],
+  exchange: ["exchange", "market", "البورصة", "السوق"],
+  currency: ["currency", "العملة"],
+  benchmark: ["is benchmark", "benchmark", "index benchmark", "مؤشر مقارنة"],
   close: ["close", "close price", "price", "last", "last price", "closing price", "سعر الإغلاق", "السعر", "آخر سعر"],
   date: ["date", "price date", "closing date", "التاريخ", "تاريخ السعر"],
+  dailyChange: ["daily change", "daily change %", "change %", "التغير اليومي", "نسبة التغير"],
+  marketCap: ["market cap", "market capitalization", "القيمة السوقية"],
 };
-
+const blankAsset = { id: null, ticker: "", display_name: "", display_name_ar: "", asset_type: "stock", sector: "", exchange: "EGX", currency: "EGP", is_benchmark: false, current_price: "", price_date: new Date().toISOString().slice(0, 10), daily_change_pct: "", market_cap: "" };
 const cleanKey = (value) => String(value || "").trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
-const cleanTicker = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-
-function findValue(row, keys) {
-  const entries = Object.entries(row).map(([key, value]) => [cleanKey(key), value]);
-  for (const alias of keys) {
-    const found = entries.find(([key]) => key === alias || key.includes(alias));
-    if (found) return found[1];
-  }
-  return undefined;
+const cleanTicker = (value) => String(value || "").trim().toUpperCase().replace(/[^A-Z0-9._-]/g, "");
+function findValue(row, keys) { const entries=Object.entries(row).map(([key,value])=>[cleanKey(key),value]); for(const alias of keys){ const found=entries.find(([key])=>key===alias||key.includes(alias)); if(found)return found[1]; } return undefined; }
+function normaliseDate(value) { if(value instanceof Date&&!Number.isNaN(value.getTime()))return value.toISOString().slice(0,10); if(typeof value==="number"){const parsed=XLSX.SSF.parse_date_code(value);if(parsed)return `${parsed.y}-${String(parsed.m).padStart(2,"0")}-${String(parsed.d).padStart(2,"0")}`;} const text=String(value||"").trim();if(!text)return new Date().toISOString().slice(0,10);if(/^\d{4}-\d{2}-\d{2}$/.test(text))return text;const parsed=new Date(text);return Number.isNaN(parsed.getTime())?new Date().toISOString().slice(0,10):parsed.toISOString().slice(0,10); }
+function normalisePrice(value) { if(typeof value==="number")return value;return Number(String(value||"").replace(/,/g,"").replace(/[^0-9.-]/g,"")); }
+function normaliseBoolean(value) { if(typeof value==="boolean")return value; return ["1","true","yes","y","index","benchmark","نعم","مؤشر"].includes(String(value||"").trim().toLowerCase()); }
+function normaliseType(value,ticker) { const text=String(value||"").trim().toLowerCase(); if(text.includes("index")||text.includes("مؤشر")||ticker.startsWith("EGX"))return "index"; if(text.includes("fund")||text.includes("صندوق"))return "fund"; return "stock"; }
+function normaliseRow(row,index) {
+  const ticker=cleanTicker(findValue(row,aliases.ticker)); const close=normalisePrice(findValue(row,aliases.close)); const date=normaliseDate(findValue(row,aliases.date)); const company=String(findValue(row,aliases.company)||"").trim(); const type=normaliseType(findValue(row,aliases.type),ticker); const errors=[];
+  if(!ticker)errors.push("Missing ticker"); if(!Number.isFinite(close)||close<0)errors.push("Invalid close price");
+  return { row:index+2,ticker,company_name:company||ticker,display_name_ar:String(findValue(row,aliases.companyAr)||"").trim()||null,asset_type:type,sector:String(findValue(row,aliases.sector)||"").trim()||null,exchange:String(findValue(row,aliases.exchange)||"EGX").trim().toUpperCase(),currency:String(findValue(row,aliases.currency)||"EGP").trim().toUpperCase(),is_benchmark:normaliseBoolean(findValue(row,aliases.benchmark))||type==="index",close_price:close,price_date:date,daily_change_pct:Number.isFinite(normalisePrice(findValue(row,aliases.dailyChange)))?normalisePrice(findValue(row,aliases.dailyChange)):null,market_cap:Number.isFinite(normalisePrice(findValue(row,aliases.marketCap)))?normalisePrice(findValue(row,aliases.marketCap)):null,errors };
 }
-
-function normaliseDate(value) {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0, 10);
-  if (typeof value === "number") {
-    const parsed = XLSX.SSF.parse_date_code(value);
-    if (parsed) return `${parsed.y}-${String(parsed.m).padStart(2, "0")}-${String(parsed.d).padStart(2, "0")}`;
-  }
-  const text = String(value || "").trim();
-  if (!text) return new Date().toISOString().slice(0, 10);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
-  const parsed = new Date(text);
-  return Number.isNaN(parsed.getTime()) ? new Date().toISOString().slice(0, 10) : parsed.toISOString().slice(0, 10);
-}
-
-function normalisePrice(value) {
-  if (typeof value === "number") return value;
-  const cleaned = String(value || "").replace(/,/g, "").replace(/[^0-9.-]/g, "");
-  return Number(cleaned);
-}
-
-function normaliseRow(row, index) {
-  const ticker = cleanTicker(findValue(row, aliases.ticker));
-  const close = normalisePrice(findValue(row, aliases.close));
-  const date = normaliseDate(findValue(row, aliases.date));
-  const company = String(findValue(row, aliases.company) || "").trim();
-  const errors = [];
-  if (!ticker) errors.push("Missing ticker");
-  if (!Number.isFinite(close) || close < 0) errors.push("Invalid close price");
-  return { row: index + 2, ticker, company_name: company || null, close_price: close, price_date: date, errors };
-}
-
-function addTicker(target, tickerValue, details = {}) {
-  const ticker = cleanTicker(tickerValue);
-  if (!ticker) return;
-  const existing = target.get(ticker) || { ticker, company_name: "", current_price: "", price_date: "", used_in: new Set() };
-  if (details.company_name && !existing.company_name) existing.company_name = details.company_name;
-  if (Number.isFinite(Number(details.current_price))) existing.current_price = Number(details.current_price);
-  if (details.price_date) existing.price_date = details.price_date;
-  if (details.used_in) existing.used_in.add(details.used_in);
-  target.set(ticker, existing);
-}
+function addTicker(target,tickerValue,details={}) { const ticker=cleanTicker(tickerValue);if(!ticker)return;const existing=target.get(ticker)||{ticker,company_name:"",current_price:"",price_date:"",used_in:new Set()};if(details.company_name&&!existing.company_name)existing.company_name=details.company_name;if(Number.isFinite(Number(details.current_price)))existing.current_price=Number(details.current_price);if(details.price_date)existing.price_date=details.price_date;if(details.used_in)existing.used_in.add(details.used_in);target.set(ticker,existing); }
 
 export default function PriceImportAdmin() {
+  const { profile } = useAuth();
   const { isArabic } = useLanguage();
-  const locale = isArabic ? "ar-EG" : "en-GB";
-  const [rows, setRows] = useState([]);
-  const [fileName, setFileName] = useState("");
-  const [message, setMessage] = useState("");
-  const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState(null);
-  const [activeTickers, setActiveTickers] = useState([]);
-  const [loadingTemplate, setLoadingTemplate] = useState(true);
+  const locale=isArabic?"ar-EG":"en-GB";
+  const isSuperAdmin=Boolean(profile?.is_super_admin);
+  const [rows,setRows]=useState([]); const [fileName,setFileName]=useState(""); const [message,setMessage]=useState(""); const [importing,setImporting]=useState(false); const [result,setResult]=useState(null); const [activeTickers,setActiveTickers]=useState([]); const [masterAssets,setMasterAssets]=useState([]); const [loadingTemplate,setLoadingTemplate]=useState(true); const [assetForm,setAssetForm]=useState(blankAsset); const [editingAsset,setEditingAsset]=useState(false); const [notifyFollowers,setNotifyFollowers]=useState(true);
+  const validRows=useMemo(()=>rows.filter(row=>!row.errors.length),[rows]); const invalidRows=useMemo(()=>rows.filter(row=>row.errors.length),[rows]); const uniqueValidRows=useMemo(()=>{const byTicker=new Map();validRows.forEach(row=>byTicker.set(row.ticker,row));return [...byTicker.values()];},[validRows]); const duplicateRows=validRows.length-uniqueValidRows.length;
 
-  const validRows = useMemo(() => rows.filter((row) => !row.errors.length), [rows]);
-  const invalidRows = useMemo(() => rows.filter((row) => row.errors.length), [rows]);
-  const uniqueValidRows = useMemo(() => {
-    const byTicker = new Map();
-    validRows.forEach((row) => byTicker.set(row.ticker, row));
-    return [...byTicker.values()];
-  }, [validRows]);
-  const duplicateRows = validRows.length - uniqueValidRows.length;
-
-  const loadActiveTickers = async () => {
+  const loadActiveTickers=async()=>{
     setLoadingTemplate(true);
-    try {
-      const [monthsResult, recommendationsResult, pricesResult] = await Promise.all([
-        supabase.from("strategy_months").select("id, month_key, is_closed, benchmark_ticker, holdings(ticker)").eq("is_closed", false),
-        supabase.from("recommendations").select("ticker, company_name, status, benchmark_ticker").in("status", ["draft", "open"]),
+    try{
+      const requests=[
+        supabase.from("strategy_months").select("id, month_key, is_closed, benchmark_ticker, holdings(ticker)").eq("is_closed",false),
+        supabase.from("recommendations").select("ticker, company_name, status, benchmark_ticker").in("status",["draft","open"]),
         supabase.from("market_prices").select("ticker, company_name, close_price, price_date"),
-      ]);
-      const error = monthsResult.error || recommendationsResult.error || pricesResult.error;
-      if (error) throw error;
+      ];
+      if(isSuperAdmin)requests.push(supabase.from("master_assets").select("*").order("ticker"));
+      const results=await Promise.all(requests); const error=results.find(item=>item.error)?.error;if(error)throw error;
+      const [monthsResult,recommendationsResult,pricesResult,masterResult]=results; const priceMap=new Map((pricesResult.data||[]).map(item=>[cleanTicker(item.ticker),item])); const tickerMap=new Map();
+      (monthsResult.data||[]).forEach(month=>{(month.holdings||[]).forEach(holding=>{const price=priceMap.get(cleanTicker(holding.ticker));addTicker(tickerMap,holding.ticker,{company_name:price?.company_name,current_price:price?.close_price,price_date:price?.price_date,used_in:`Portfolio · ${month.month_key||"Open month"}`});});const benchmarkPrice=priceMap.get(cleanTicker(month.benchmark_ticker));addTicker(tickerMap,month.benchmark_ticker,{company_name:benchmarkPrice?.company_name||"Benchmark",current_price:benchmarkPrice?.close_price,price_date:benchmarkPrice?.price_date,used_in:"Benchmark"});});
+      (recommendationsResult.data||[]).forEach(recommendation=>{const price=priceMap.get(cleanTicker(recommendation.ticker));addTicker(tickerMap,recommendation.ticker,{company_name:recommendation.company_name||price?.company_name,current_price:price?.close_price,price_date:price?.price_date,used_in:"Independent recommendation"});const benchmarkPrice=priceMap.get(cleanTicker(recommendation.benchmark_ticker));addTicker(tickerMap,recommendation.benchmark_ticker,{company_name:benchmarkPrice?.company_name||"Benchmark",current_price:benchmarkPrice?.close_price,price_date:benchmarkPrice?.price_date,used_in:"Benchmark"});});
+      setActiveTickers([...tickerMap.values()].map(item=>({...item,used_in:[...item.used_in].join(" | ")})).sort((a,b)=>a.ticker.localeCompare(b.ticker))); if(isSuperAdmin)setMasterAssets(masterResult?.data||[]);
+    }catch(error){setMessage(error.message);}finally{setLoadingTemplate(false);}
+  };
+  useEffect(()=>{void loadActiveTickers();},[isSuperAdmin]);
 
-      const priceMap = new Map((pricesResult.data || []).map((item) => [cleanTicker(item.ticker), item]));
-      const tickerMap = new Map();
+  const downloadSmartTemplate=()=>{
+    const today=new Date().toISOString().slice(0,10); const source=isSuperAdmin&&masterAssets.length?masterAssets:activeTickers;if(!source.length)return;
+    const sheetRows=source.map(item=>isSuperAdmin?{Ticker:item.ticker,Name:item.display_name||"","Name AR":item.display_name_ar||"",Type:item.asset_type||"stock",Sector:item.sector||"",Exchange:item.exchange||"EGX",Currency:item.currency||"EGP","Is Benchmark":item.is_benchmark?"Yes":"No",Close:item.current_price??"",Date:item.price_date||today,"Daily Change %":item.daily_change_pct??"","Market Cap":item.market_cap??""}:{Ticker:item.ticker,Company:item.company_name||"",Close:item.current_price===""?"":item.current_price,Date:item.price_date||today,"Used In":item.used_in});
+    const workbook=XLSX.utils.book_new();const sheet=XLSX.utils.json_to_sheet(sheetRows);sheet["!cols"]=[{wch:15},{wch:30},{wch:25},{wch:13},{wch:20},{wch:12},{wch:10},{wch:15},{wch:15},{wch:14},{wch:18},{wch:20}];XLSX.utils.book_append_sheet(workbook,sheet,isSuperAdmin?"Master Assets":"Active Tickers");XLSX.writeFile(workbook,isSuperAdmin?`alpha-master-assets-${today}.xlsx`:`alpha-platform-all-active-tickers-${today}.xlsx`);
+  };
+  const readFile=async(file)=>{setMessage("");setResult(null);setFileName(file?.name||"");if(!file)return setRows([]);try{const buffer=await file.arrayBuffer();const workbook=XLSX.read(buffer,{type:"array",cellDates:true});const raw=XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]],{defval:"",raw:true});const normalised=raw.map(normaliseRow);setRows(normalised);if(!normalised.length)setMessage(isArabic?"الملف لا يحتوي على بيانات":"The file contains no data rows.");}catch(error){setRows([]);setMessage(error.message);}};
 
-      (monthsResult.data || []).forEach((month) => {
-        (month.holdings || []).forEach((holding) => {
-          const price = priceMap.get(cleanTicker(holding.ticker));
-          addTicker(tickerMap, holding.ticker, { company_name: price?.company_name, current_price: price?.close_price, price_date: price?.price_date, used_in: `Portfolio · ${month.month_key || "Open month"}` });
-        });
-        const benchmarkPrice = priceMap.get(cleanTicker(month.benchmark_ticker));
-        addTicker(tickerMap, month.benchmark_ticker, { company_name: benchmarkPrice?.company_name || "Benchmark", current_price: benchmarkPrice?.close_price, price_date: benchmarkPrice?.price_date, used_in: "Benchmark" });
-      });
-
-      (recommendationsResult.data || []).forEach((recommendation) => {
-        const price = priceMap.get(cleanTicker(recommendation.ticker));
-        addTicker(tickerMap, recommendation.ticker, { company_name: recommendation.company_name || price?.company_name, current_price: price?.close_price, price_date: price?.price_date, used_in: "Independent recommendation" });
-        const benchmarkPrice = priceMap.get(cleanTicker(recommendation.benchmark_ticker));
-        addTicker(tickerMap, recommendation.benchmark_ticker, { company_name: benchmarkPrice?.company_name || "Benchmark", current_price: benchmarkPrice?.close_price, price_date: benchmarkPrice?.price_date, used_in: "Benchmark" });
-      });
-
-      setActiveTickers([...tickerMap.values()].map((item) => ({ ...item, used_in: [...item.used_in].join(" | ") })).sort((a, b) => a.ticker.localeCompare(b.ticker)));
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setLoadingTemplate(false);
-    }
+  const importPrices=async()=>{
+    if(!uniqueValidRows.length||importing)return;setImporting(true);setMessage(isArabic?"جاري تحديث Master Asset Registry وكل السجلات المرتبطة…":"Updating the Master Asset Registry and every linked record…");setResult(null);
+    try{
+      const now=new Date().toISOString(); const templateMap=new Map(activeTickers.map(item=>[item.ticker,item])); const latestPayload=uniqueValidRows.map(row=>({ticker:row.ticker,company_name:row.company_name||templateMap.get(row.ticker)?.company_name||row.ticker,close_price:Number(row.close_price),price_date:row.price_date,source:fileName||"Excel upload",updated_at:now})); const historyPayload=uniqueValidRows.map(row=>({ticker:row.ticker,close_price:Number(row.close_price),price_date:row.price_date,source:fileName||"Excel upload"}));
+      if(isSuperAdmin){
+        const masterMap=new Map(masterAssets.map(item=>[item.ticker,item])); const masterPayload=uniqueValidRows.map(row=>{const existing=masterMap.get(row.ticker);return {ticker:row.ticker,display_name:(row.company_name&&row.company_name!==row.ticker?row.company_name:existing?.display_name)||row.ticker,display_name_ar:row.display_name_ar||existing?.display_name_ar||null,asset_type:row.asset_type||existing?.asset_type||"stock",sector:row.sector||existing?.sector||null,exchange:row.exchange||existing?.exchange||"EGX",currency:row.currency||existing?.currency||"EGP",is_benchmark:Boolean(row.is_benchmark||existing?.is_benchmark),is_active:true,current_price:Number(row.close_price),price_date:row.price_date,daily_change_pct:row.daily_change_pct??existing?.daily_change_pct??null,market_cap:row.market_cap??existing?.market_cap??null,source:fileName||"Master Excel upload"};});
+        const {error:masterError}=await supabase.from("master_assets").upsert(masterPayload,{onConflict:"ticker"});if(masterError)throw masterError;
+      }else{
+        const {error:latestError}=await supabase.from("market_prices").upsert(latestPayload,{onConflict:"ticker"});if(latestError)throw latestError;const {error:historyError}=await supabase.from("price_history").upsert(historyPayload,{onConflict:"ticker,price_date"});if(historyError)throw historyError;
+      }
+      const {data:applied,error:applyError}=await supabase.rpc("apply_latest_market_prices");if(applyError)throw applyError;
+      let virtualUpdated=0;let routedNotifications=0;
+      if(isSuperAdmin){const latestDate=[...uniqueValidRows].sort((a,b)=>String(a.price_date).localeCompare(String(b.price_date))).at(-1)?.price_date||new Date().toISOString().slice(0,10);const refreshResult=await supabase.rpc("refresh_user_virtual_portfolios",{p_price_date:latestDate});if(refreshResult.error)throw refreshResult.error;virtualUpdated=refreshResult.data||0;}
+      const {error:queueError}=await supabase.rpc("queue_daily_performance_notifications");if(queueError)console.warn("Public portfolio push queue was not created",queueError);
+      if(isSuperAdmin&&notifyFollowers){const routeResult=await supabase.rpc("queue_master_asset_notifications",{p_tickers:uniqueValidRows.map(row=>row.ticker)});if(routeResult.error)throw routeResult.error;routedNotifications=routeResult.data||0;}
+      void dispatchQueuedPushNotifications(); setResult({...(applied||{}),unique_tickers:uniqueValidRows.length,duplicate_rows_ignored:duplicateRows,virtual_updated:virtualUpdated,routed_notifications:routedNotifications});setMessage(isArabic?"تم التحديث. سجل الأصول هو المصدر الرئيسي الآن، وتم تحديث المحافظ العامة والخاصة المرتبطة.":"Update complete. The master registry is now refreshed and all linked public/private portfolios were recalculated.");await loadActiveTickers();
+    }catch(error){setMessage(error.message);}finally{setImporting(false);}
   };
 
-  useEffect(() => { loadActiveTickers(); }, []);
+  const editAsset=(asset)=>{setAssetForm({...blankAsset,...asset,current_price:asset.current_price??"",daily_change_pct:asset.daily_change_pct??"",market_cap:asset.market_cap??""});setEditingAsset(true);};
+  const saveAsset=async()=>{if(!isSuperAdmin)return;const payload={ticker:cleanTicker(assetForm.ticker),display_name:assetForm.display_name.trim()||cleanTicker(assetForm.ticker),display_name_ar:assetForm.display_name_ar?.trim()||null,asset_type:assetForm.asset_type,sector:assetForm.sector?.trim()||null,exchange:(assetForm.exchange||"EGX").toUpperCase(),currency:(assetForm.currency||"EGP").toUpperCase(),is_benchmark:Boolean(assetForm.is_benchmark||assetForm.asset_type==="index"),is_active:true,current_price:assetForm.current_price===""?null:Number(assetForm.current_price),price_date:assetForm.price_date||null,daily_change_pct:assetForm.daily_change_pct===""?null:Number(assetForm.daily_change_pct),market_cap:assetForm.market_cap===""?null:Number(assetForm.market_cap),source:"Admin registry"};let response;if(assetForm.id)response=await supabase.from("master_assets").update(payload).eq("id",assetForm.id);else response=await supabase.from("master_assets").insert(payload);if(response.error)return setMessage(response.error.message);setEditingAsset(false);setAssetForm(blankAsset);setMessage(isArabic?"تم حفظ الأصل في السجل الرئيسي.":"Asset saved to the master registry.");await loadActiveTickers();};
+  const toggleAsset=async(asset)=>{const {error}=await supabase.from("master_assets").update({is_active:!asset.is_active}).eq("id",asset.id);if(error)return setMessage(error.message);await loadActiveTickers();};
 
-  const downloadSmartTemplate = () => {
-    if (!activeTickers.length) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const sheetRows = activeTickers.map((item) => ({
-      Ticker: item.ticker,
-      Company: item.company_name || "",
-      Close: item.current_price === "" ? "" : item.current_price,
-      Date: item.price_date || today,
-      "Used In": item.used_in,
-    }));
-    const workbook = XLSX.utils.book_new();
-    const sheet = XLSX.utils.json_to_sheet(sheetRows);
-    sheet["!cols"] = [{ wch: 15 }, { wch: 30 }, { wch: 15 }, { wch: 14 }, { wch: 54 }];
-    XLSX.utils.book_append_sheet(workbook, sheet, "All Active Tickers");
-    XLSX.writeFile(workbook, `alpha-platform-all-active-tickers-${today}.xlsx`);
-  };
+  return <div className="dashboard-shell admin-shell-v21"><DashboardHeader admin/><main className="price-import-page-v22 price-import-page-v34 master-assets-page-v312">
+    <section className="admin-top-v21 price-import-top-v22"><div><span className="eyebrow">{isSuperAdmin?"MASTER ASSET REGISTRY":"MASTER PRICE ENGINE"}</span><h1>{isSuperAdmin?(isArabic?"إدارة كل الأصول من مصدر واحد":"One registry. Every asset. Every portfolio."):(isArabic?"تحديث كل الأسعار من ملف واحد":"One sheet. Every active ticker.")}</h1><p>{isSuperAdmin?(isArabic?"الأسهم والمؤشرات والصناديق لها سجل موحد يمنع التكرار. ملف Excel الرئيسي يحدّث الأسعار، المحافظ العامة، المحافظ الافتراضية، والألفا في عملية واحدة.":"Stocks, indexes and funds now live in one deduplicated registry. One master Excel import updates prices, public portfolios, private virtual portfolios and Alpha."):(isArabic?"حمّل قالب الأسعار وحدّث السجلات المفتوحة الحالية.":"Download the active ticker template and refresh the existing public records.")}</p></div><button className="button primary" disabled={loadingTemplate||!(isSuperAdmin?masterAssets.length:activeTickers.length)} onClick={downloadSmartTemplate}><Download size={16}/>{isArabic?"تحميل Master Excel":"Download Master Excel"}</button></section>
+    {message&&<div className="notice-bar">{message}</div>}
 
-  const readFile = async (file) => {
-    setMessage("");
-    setResult(null);
-    setFileName(file?.name || "");
-    if (!file) return setRows([]);
-    try {
-      const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json(firstSheet, { defval: "", raw: true });
-      const normalised = raw.map(normaliseRow);
-      setRows(normalised);
-      if (!normalised.length) setMessage(isArabic ? "الملف لا يحتوي على بيانات" : "The file contains no data rows.");
-    } catch (error) {
-      setRows([]);
-      setMessage(error.message);
-    }
-  };
+    {isSuperAdmin&&<><section className="master-registry-summary-v312"><article><Database/><span><small>{isArabic?"إجمالي الأصول":"Master assets"}</small><b>{masterAssets.length}</b></span></article><article><Layers3/><span><small>{isArabic?"مؤشرات مقارنة":"Benchmarks"}</small><b>{masterAssets.filter(item=>item.is_benchmark&&item.is_active).length}</b></span></article><article><CheckCircle2/><span><small>{isArabic?"أصول نشطة":"Active assets"}</small><b>{masterAssets.filter(item=>item.is_active).length}</b></span></article><button className="button subtle" onClick={()=>{setAssetForm(blankAsset);setEditingAsset(true);}}><Plus size={16}/>{isArabic?"إضافة أصل":"Add asset"}</button></section>
+    {editingAsset&&<section className="panel-v21 master-asset-editor-v312"><header><div><span className="eyebrow">ASSET IDENTITY</span><h2>{assetForm.id?(isArabic?"تعديل الأصل":"Edit asset"):(isArabic?"أصل جديد":"New master asset")}</h2></div><button onClick={()=>setEditingAsset(false)}><X/></button></header><div><label>Ticker<input value={assetForm.ticker} onChange={e=>setAssetForm({...assetForm,ticker:e.target.value.toUpperCase()})}/></label><label>{isArabic?"الاسم القياسي":"Standard name"}<input value={assetForm.display_name} onChange={e=>setAssetForm({...assetForm,display_name:e.target.value})}/></label><label>{isArabic?"الاسم العربي":"Arabic name"}<input value={assetForm.display_name_ar||""} onChange={e=>setAssetForm({...assetForm,display_name_ar:e.target.value})}/></label><label>{isArabic?"النوع":"Type"}<select value={assetForm.asset_type} onChange={e=>setAssetForm({...assetForm,asset_type:e.target.value,is_benchmark:e.target.value==="index"?true:assetForm.is_benchmark})}><option value="stock">Stock</option><option value="index">Index</option><option value="fund">Fund</option></select></label><label>{isArabic?"القطاع":"Sector"}<input value={assetForm.sector||""} onChange={e=>setAssetForm({...assetForm,sector:e.target.value})}/></label><label>{isArabic?"البورصة":"Exchange"}<input value={assetForm.exchange||"EGX"} onChange={e=>setAssetForm({...assetForm,exchange:e.target.value})}/></label><label>{isArabic?"العملة":"Currency"}<input value={assetForm.currency||"EGP"} onChange={e=>setAssetForm({...assetForm,currency:e.target.value})}/></label><label>{isArabic?"السعر الحالي":"Current price"}<input type="number" value={assetForm.current_price} onChange={e=>setAssetForm({...assetForm,current_price:e.target.value})}/></label><label>{isArabic?"تاريخ السعر":"Price date"}<input type="date" value={assetForm.price_date||""} onChange={e=>setAssetForm({...assetForm,price_date:e.target.value})}/></label><label className="check-label-v21"><input type="checkbox" checked={Boolean(assetForm.is_benchmark)} onChange={e=>setAssetForm({...assetForm,is_benchmark:e.target.checked})}/><span>{isArabic?"متاح كمؤشر مقارنة":"Benchmark eligible"}</span></label></div><footer><button className="button primary" onClick={saveAsset}><Save size={16}/>{isArabic?"حفظ":"Save asset"}</button></footer></section>}
+    <section className="panel-v21 master-registry-table-v312"><header><div><span className="eyebrow">MASTER LIST</span><h2>{isArabic?"السجل الموحد للأصول":"Central asset registry"}</h2></div></header><div className="table-scroll"><table className="data-table-v21"><thead><tr><th>Ticker</th><th>{isArabic?"الاسم":"Name"}</th><th>{isArabic?"النوع":"Type"}</th><th>{isArabic?"السعر":"Price"}</th><th>{isArabic?"التاريخ":"Date"}</th><th>{isArabic?"مؤشر":"Benchmark"}</th><th>{isArabic?"الحالة":"Status"}</th><th></th></tr></thead><tbody>{masterAssets.map(asset=><tr key={asset.id}><td><b className="ticker-chip">{asset.ticker}</b></td><td>{asset.display_name}<small>{asset.sector||asset.exchange}</small></td><td>{asset.asset_type}</td><td>{asset.current_price==null?"—":formatNumber(asset.current_price,2,locale)}</td><td>{asset.price_date||"—"}</td><td>{asset.is_benchmark?"✓":"—"}</td><td><span className={asset.is_active?"positive":"muted-copy-v21"}>{asset.is_active?(isArabic?"نشط":"Active"):(isArabic?"متوقف":"Inactive")}</span></td><td><div className="row-actions"><button onClick={()=>editAsset(asset)}><Pencil size={14}/></button><button onClick={()=>toggleAsset(asset)}><Power size={14}/></button></div></td></tr>)}</tbody></table></div></section></>}
 
-  const importPrices = async () => {
-    if (!uniqueValidRows.length || importing) return;
-    setImporting(true);
-    setMessage(isArabic ? "جاري تحديث قاعدة الأسعار وكل السجلات المفتوحة…" : "Updating the price master and every open record…");
-    setResult(null);
-    try {
-      const now = new Date().toISOString();
-      const templateMap = new Map(activeTickers.map((item) => [item.ticker, item]));
-      const latestPayload = uniqueValidRows.map((row) => ({
-        ticker: row.ticker,
-        company_name: row.company_name || templateMap.get(row.ticker)?.company_name || null,
-        close_price: Number(row.close_price),
-        price_date: row.price_date,
-        source: fileName || "Excel upload",
-        updated_at: now,
-      }));
-      const historyPayload = uniqueValidRows.map((row) => ({ ticker: row.ticker, close_price: Number(row.close_price), price_date: row.price_date, source: fileName || "Excel upload" }));
+    <section className="smart-template-banner-v34 panel-v21"><span><Layers3/></span><div><small>SMART CONSOLIDATION</small><h2>{isArabic?"كل Ticker يظهر مرة واحدة فقط":"Every ticker appears once"}</h2><p>{isArabic?"الـUnique Constraint والتسمية القياسية يمنعوا إدخال نفس الأصل مرتين. التحديث الرئيسي ينتشر تلقائيًا لكل الأماكن المرتبطة.":"The unique ticker constraint and standardized identity prevent duplicates; one price update propagates across every linked workflow."}</p></div><b>{isSuperAdmin?masterAssets.filter(item=>item.is_active).length:activeTickers.length}</b></section>
 
-      const { error: latestError } = await supabase.from("market_prices").upsert(latestPayload, { onConflict: "ticker" });
-      if (latestError) throw latestError;
-      const { error: historyError } = await supabase.from("price_history").upsert(historyPayload, { onConflict: "ticker,price_date" });
-      if (historyError) throw historyError;
-      const { data: applied, error: applyError } = await supabase.rpc("apply_latest_market_prices");
-      if (applyError) throw applyError;
-      const { error: queueError } = await supabase.rpc("queue_daily_performance_notifications");
-      if (queueError) console.warn("Daily push queue was not created", queueError);
-      void dispatchQueuedPushNotifications();
+    <section className="price-import-grid-v22"><article className="panel-v21 padded-v21 upload-panel-v22"><div className="panel-heading-v21"><div><span className="eyebrow">STEP 1</span><h2>{isArabic?"اختار ملف Master Excel":"Choose the completed Master Excel"}</h2><p>{isSuperAdmin?(isArabic?"يدعم Ticker, Name, Type, Sector, Exchange, Currency, Is Benchmark, Close, Date, Daily Change %, Market Cap.":"Supports Ticker, Name, Type, Sector, Exchange, Currency, Is Benchmark, Close, Date, Daily Change %, Market Cap."):(isArabic?"الأعمدة الأساسية: Ticker, Close, Date.":"Core columns: Ticker, Close, Date.")}</p></div></div><label className="drop-zone-v22"><UploadCloud size={42}/><b>{fileName||(isArabic?"اضغط لاختيار Excel أو CSV":"Click to choose Excel or CSV")}</b><small>.xlsx · .xls · .csv</small><input type="file" accept=".xlsx,.xls,.csv" onChange={e=>readFile(e.target.files?.[0])}/></label><div className="template-rules-v22"><span><CheckCircle2/>{isArabic?"الرموز المكررة يتم دمجها":"Duplicate ticker rows are deduplicated"}</span><span><CheckCircle2/>{isArabic?"السجلات العامة المغلقة تظل ثابتة":"Closed public records remain frozen"}</span>{isSuperAdmin&&<span><CheckCircle2/>{isArabic?"المحافظ الافتراضية تتحدث تلقائيًا":"Private virtual portfolios recalculate automatically"}</span>}</div></article>
+    <article className="panel-v21 padded-v21 import-summary-panel-v22"><span className="eyebrow">STEP 2</span><h2>{isArabic?"مراجعة قبل التحديث":"Review before import"}</h2><div className="import-counts-v22"><span><FileSpreadsheet/><small>{isArabic?"كل الصفوف":"Total rows"}</small><b>{rows.length}</b></span><span className="valid"><CheckCircle2/><small>{isArabic?"رموز فريدة":"Unique valid"}</small><b>{uniqueValidRows.length}</b></span><span className="invalid"><XCircle/><small>{isArabic?"مشكلات / تكرار":"Invalid / duplicate"}</small><b>{invalidRows.length+duplicateRows}</b></span></div>{isSuperAdmin&&<label className="master-notify-toggle-v312"><input type="checkbox" checked={notifyFollowers} onChange={e=>setNotifyFollowers(e.target.checked)}/><span><b>{isArabic?"إشعار المتابعين وأصحاب المحافظ الخاصة":"Notify followers & private portfolio owners"}</b><small>{isArabic?"سيتم التجميع لكل مستخدم لتقليل الإزعاج.":"Personal updates are consolidated to reduce notification fatigue."}</small></span></label>}<button className="button green full" disabled={!uniqueValidRows.length||importing} onClick={importPrices}><RefreshCw size={16}/>{importing?(isArabic?"جاري التحديث…":"Updating…"):(isArabic?"تحديث كل السجلات المرتبطة":"Update every linked record")}</button>{result&&<div className="import-result-v22"><CheckCircle2/><div><b>{isArabic?"اكتمل التحديث":"Import completed"}</b><span>{isArabic?`تم رفع ${result.unique_tickers||0} رمز. تم تحديث ${result.holdings_updated||0} مركز عام و${result.virtual_updated||0} محفظة افتراضية.`:`${result.unique_tickers||0} tickers imported, ${result.holdings_updated||0} public holdings and ${result.virtual_updated||0} virtual portfolios refreshed.`}</span></div></div>}</article></section>
 
-      setResult({ ...(applied || {}), unique_tickers: uniqueValidRows.length, duplicate_rows_ignored: duplicateRows });
-      setMessage(isArabic ? "تم التحديث بنجاح. تم تطبيق كل رمز مرة واحدة على جميع المحافظ والتوصيات المفتوحة التي تستخدمه." : "Update completed. Each ticker was applied once across every open portfolio and recommendation that references it.");
-      await loadActiveTickers();
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  return (
-    <div className="dashboard-shell admin-shell-v21">
-      <DashboardHeader admin />
-      <main className="price-import-page-v22 price-import-page-v34">
-        <section className="admin-top-v21 price-import-top-v22">
-          <div><span className="eyebrow">MASTER PRICE ENGINE</span><h1>{isArabic ? "تحديث كل الأسعار من ملف واحد" : "One sheet. Every active ticker."}</h1><p>{isArabic ? "حمّل قالبًا ذكيًا يجمع كل الرموز النشطة بدون تكرار، حدّث الأسعار، ثم ارفعه ليتم تطبيق كل رمز على كل المحافظ والتوصيات المرتبطة به." : "Download a smart template containing every unique active ticker, update the prices, then upload it once to refresh all linked portfolios and recommendations."}</p></div>
-          <button className="button primary" type="button" disabled={loadingTemplate || !activeTickers.length} onClick={downloadSmartTemplate}><Download size={16}/>{loadingTemplate ? (isArabic ? "جاري التجميع…" : "Building template…") : (isArabic ? `تحميل قالب ${activeTickers.length} رمز` : `Download ${activeTickers.length}-ticker template`)}</button>
-        </section>
-
-        {message && <div className="notice-bar">{message}</div>}
-
-        <section className="smart-template-banner-v34 panel-v21">
-          <span><Layers3/></span><div><small>SMART CONSOLIDATION</small><h2>{isArabic ? "كل رمز يظهر مرة واحدة فقط" : "Every ticker appears once"}</h2><p>{isArabic ? "حتى لو السهم موجود في أكثر من محفظة أو توصية، القالب يجمعه في صف واحد، والتحديث ينسحب تلقائيًا على كل الأماكن المفتوحة." : "Even when a stock is used in several portfolios or recommendations, the template contains one row and the import propagates it to every open reference."}</p></div><b>{activeTickers.length}</b>
-        </section>
-
-        <section className="price-import-grid-v22">
-          <article className="panel-v21 padded-v21 upload-panel-v22">
-            <div className="panel-heading-v21"><div><span className="eyebrow">STEP 1</span><h2>{isArabic ? "اختار ملف الأسعار" : "Choose the completed price file"}</h2><p>{isArabic ? "الأعمدة المقبولة: Ticker أو Symbol، Close أو Price، Date، وCompany اختياري." : "Accepted columns: Ticker or Symbol, Close or Price, Date, and optional Company."}</p></div></div>
-            <label className="drop-zone-v22"><UploadCloud size={42}/><b>{fileName || (isArabic ? "اضغط لاختيار Excel أو CSV" : "Click to choose Excel or CSV")}</b><small>.xlsx · .xls · .csv</small><input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => readFile(e.target.files?.[0])}/></label>
-            <div className="template-rules-v22"><span><CheckCircle2/>{isArabic ? "القالب يجمع الأسهم والمؤشرات النشطة تلقائيًا" : "The template discovers active stocks and benchmarks automatically"}</span><span><CheckCircle2/>{isArabic ? "الصف المكرر داخل الملف يتم دمجه قبل الرفع" : "Duplicate rows in the upload are deduplicated before import"}</span><span><CheckCircle2/>{isArabic ? "السجلات المغلقة تظل ثابتة" : "Closed records remain frozen"}</span></div>
-          </article>
-
-          <article className="panel-v21 padded-v21 import-summary-panel-v22">
-            <span className="eyebrow">STEP 2</span><h2>{isArabic ? "مراجعة قبل التحديث" : "Review before import"}</h2>
-            <div className="import-counts-v22"><span><FileSpreadsheet/><small>{isArabic ? "كل الصفوف" : "Total rows"}</small><b>{rows.length}</b></span><span className="valid"><CheckCircle2/><small>{isArabic ? "رموز فريدة" : "Unique valid"}</small><b>{uniqueValidRows.length}</b></span><span className="invalid"><XCircle/><small>{isArabic ? "مشكلات / تكرار" : "Invalid / duplicate"}</small><b>{invalidRows.length + duplicateRows}</b></span></div>
-            <button className="button green full" disabled={!uniqueValidRows.length || importing} onClick={importPrices}><RefreshCw size={16}/>{importing ? (isArabic ? "جاري التحديث…" : "Updating…") : (isArabic ? "تحديث كل السجلات المرتبطة" : "Update every linked record")}</button>
-            {result && <div className="import-result-v22"><CheckCircle2/><div><b>{isArabic ? "اكتمل التحديث" : "Import completed"}</b><span>{isArabic ? `تم رفع ${result.unique_tickers || 0} رمز فريد. تم تحديث ${result.holdings_updated || 0} مركز وإعادة حساب ${result.open_months_recalculated || 0} شهر مفتوح.` : `${result.unique_tickers || 0} unique tickers imported, ${result.holdings_updated || 0} holdings updated and ${result.open_months_recalculated || 0} open months recalculated.`}</span></div></div>}
-          </article>
-        </section>
-
-        <section className="panel-v21 price-preview-panel-v22">
-          <div className="panel-heading-v21"><div><span className="eyebrow">PREVIEW</span><h2>{isArabic ? "معاينة البيانات" : "Data preview"}</h2><p>{isArabic ? "لن يتم رفع الصفوف التي بها مشكلة، وآخر صف صالح لكل رمز مكرر هو الذي سيتم استخدامه." : "Invalid rows are skipped; for duplicate tickers, the last valid row is used."}</p></div></div>
-          <div className="table-scroll"><table className="data-table-v21 compact-table"><thead><tr><th>#</th><th>Ticker</th><th>{isArabic ? "الشركة" : "Company"}</th><th>{isArabic ? "سعر الإغلاق" : "Close"}</th><th>{isArabic ? "التاريخ" : "Date"}</th><th>{isArabic ? "الحالة" : "Status"}</th></tr></thead><tbody>{rows.slice(0, 200).map((row) => <tr key={`${row.row}-${row.ticker}`} className={row.errors.length ? "invalid-row-v22" : ""}><td>{row.row}</td><td><b className="ticker-chip">{row.ticker || "—"}</b></td><td>{row.company_name || "—"}</td><td>{Number.isFinite(row.close_price) ? formatNumber(row.close_price, 2, locale) : "—"}</td><td>{row.price_date}</td><td>{row.errors.length ? <span className="negative">{row.errors.join(", ")}</span> : <span className="positive">{isArabic ? "جاهز" : "Ready"}</span>}</td></tr>)}{!rows.length && <tr><td colSpan="6" className="muted-copy-v21">{isArabic ? "ارفع الملف وستظهر المعاينة هنا." : "Upload a file to preview the rows here."}</td></tr>}</tbody></table></div>
-        </section>
-      </main>
-    </div>
-  );
+    <section className="panel-v21 price-preview-panel-v22"><div className="panel-heading-v21"><div><span className="eyebrow">PREVIEW</span><h2>{isArabic?"معاينة البيانات":"Data preview"}</h2><p>{isArabic?"لن يتم رفع الصفوف غير الصالحة، وآخر صف صالح للرمز المكرر هو المستخدم.":"Invalid rows are skipped; the last valid row for each duplicate ticker is used."}</p></div></div><div className="table-scroll"><table className="data-table-v21 compact-table"><thead><tr><th>#</th><th>Ticker</th><th>{isArabic?"الاسم":"Name"}</th><th>Type</th><th>{isArabic?"الإغلاق":"Close"}</th><th>{isArabic?"التاريخ":"Date"}</th><th>{isArabic?"الحالة":"Status"}</th></tr></thead><tbody>{rows.slice(0,200).map(row=><tr key={`${row.row}-${row.ticker}`} className={row.errors.length?"invalid-row-v22":""}><td>{row.row}</td><td><b className="ticker-chip">{row.ticker||"—"}</b></td><td>{row.company_name||"—"}</td><td>{row.asset_type}</td><td>{Number.isFinite(row.close_price)?formatNumber(row.close_price,2,locale):"—"}</td><td>{row.price_date}</td><td>{row.errors.length?<span className="negative">{row.errors.join(", ")}</span>:<span className="positive">{isArabic?"جاهز":"Ready"}</span>}</td></tr>)}{!rows.length&&<tr><td colSpan="7" className="muted-copy-v21">{isArabic?"ارفع الملف وستظهر المعاينة هنا.":"Upload a file to preview rows here."}</td></tr>}</tbody></table></div></section>
+  </main></div>;
 }

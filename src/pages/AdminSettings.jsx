@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Building2, ImageUp, Link2, Save, Settings2, ShieldCheck, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Building2, Database, ImageUp, Link2, Save, Settings2, ShieldCheck, Trash2 } from "lucide-react";
 import DashboardHeader from "../components/DashboardHeader";
 import Brand from "../components/Brand";
 import { useAuth } from "../context/AuthContext";
@@ -111,6 +112,7 @@ export default function AdminSettings() {
       <main className="admin-settings-page-v31">
         <header className="admin-page-hero-v31"><div><span className="eyebrow">PLATFORM SETTINGS</span><h1>{isArabic ? "إدارة الهوية والمحتوى العام" : "Brand and public content management"}</h1><p>{isArabic ? "أي تعديل هنا يظهر تلقائيًا في الهيدر والفوتر وصفحة الأسعار وتقارير PDF." : "Changes made here automatically flow to the header, footer, pricing section and generated PDF reports."}</p></div><Settings2 size={34}/></header>
         {message && <div className="notice-bar">{message}</div>}
+        {profile?.is_super_admin && <section className="panel-v21 padded-v21 settings-section-v31 master-assets-settings-card-v312"><div className="panel-heading-v21"><div><span className="eyebrow">MASTER ASSET REGISTRY</span><h2>{isArabic ? "إدارة الأسهم والمؤشرات والصناديق" : "Manage stocks, indexes and funds"}</h2><p>{isArabic ? "سجل موحد يمنع تكرار الرموز ويغذي الأسعار للمحافظ العامة والخاصة من ملف Excel واحد." : "One standardized ticker registry powers prices across public and private portfolios from a single Excel workflow."}</p></div><Database size={22}/></div><Link className="button primary" to="/admin/assets"><Database size={15}/>{isArabic ? "فتح إدارة الأصول والأسعار" : "Open master assets & prices"}</Link></section>}
         <form className="settings-grid-v31" onSubmit={save}>
           <section className="panel-v21 padded-v21 settings-logo-panel-v31">
             <div className="panel-heading-v21"><div><span className="eyebrow">IDENTITY</span><h2>{isArabic ? "شعار الشركة" : "Company logo"}</h2><p>{isArabic ? "PNG أو JPG أو SVG بحد أقصى 3MB." : "PNG, JPG or SVG up to 3MB."}</p></div><ImageUp size={20}/></div>

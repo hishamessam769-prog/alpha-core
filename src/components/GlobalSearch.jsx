@@ -9,6 +9,7 @@ const baseItems = [
   { type: "page", title: "Portfolio Library", subtitle: "All published portfolio strategies", path: "/portfolios", icon: BriefcaseBusiness },
   { type: "page", title: "Stock Recommendations", subtitle: "Independent investment calls, targets and track record", path: "/recommendations", icon: TrendingUp },
   { type: "page", title: "Alpha Apex Robo-Advisor", subtitle: "Risk profile and asset-allocation proposal", path: "/advisor", icon: BrainCircuit },
+  { type: "page", title: "My Virtual Portfolios", subtitle: "Build 5-10 asset portfolios and measure Alpha vs a benchmark", path: "/my-portfolios", icon: BriefcaseBusiness },
   { type: "page", title: "Personal Portfolio Journal", subtitle: "Private daily portfolio snapshots, return, volatility and drawdown", path: "/my-journal", icon: TrendingUp },
   { type: "page", title: "Research Methodology", subtitle: "How ALPHA measures performance and risk", path: "/methodology", icon: Sparkles },
   { type: "page", title: "News & Analysis", subtitle: "Market news, company updates and events", path: "/news", icon: Newspaper },

@@ -28,6 +28,7 @@ import AdminAnalytics from "./pages/AdminAnalytics";
 import NotificationInbox from "./pages/NotificationInbox";
 import RoboAdvisor from "./pages/RoboAdvisor";
 import MyJournal from "./pages/MyJournal";
+import VirtualPortfolios from "./pages/VirtualPortfolios";
 import ProtectedRoute from "./components/ProtectedRoute";
 import SupportWidget from "./components/SupportWidget";
 import SmartSurvey from "./components/SmartSurvey";
@@ -68,10 +69,12 @@ export default function App() {
         <Route path="/robo-advisor" element={<Navigate to="/advisor" replace />} />
         <Route path="/my-journal" element={<ProtectedRoute><MyJournal /></ProtectedRoute>} />
         <Route path="/tracker" element={<Navigate to="/my-journal" replace />} />
+        <Route path="/my-portfolios" element={<ProtectedRoute><VirtualPortfolios /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute adminOnly permission="manage_portfolios"><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/recommendations" element={<ProtectedRoute adminOnly permission="manage_recommendations"><RecommendationAdmin /></ProtectedRoute>} />
         <Route path="/admin/weekly-reports" element={<ProtectedRoute adminOnly permission="manage_reports"><WeeklyReportsAdmin /></ProtectedRoute>} />
         <Route path="/admin/prices" element={<ProtectedRoute adminOnly anyPermission={["manage_portfolios", "manage_recommendations"]}><PriceImportAdmin /></ProtectedRoute>} />
+        <Route path="/admin/assets" element={<ProtectedRoute superAdminOnly><PriceImportAdmin /></ProtectedRoute>} />
         <Route path="/admin/support" element={<ProtectedRoute adminOnly permission="support_inbox"><AdminSupport /></ProtectedRoute>} />
         <Route path="/admin/settings" element={<ProtectedRoute adminOnly permission="manage_settings"><AdminSettings /></ProtectedRoute>} />
         <Route path="/admin/team" element={<ProtectedRoute superAdminOnly><AdminTeam /></ProtectedRoute>} />

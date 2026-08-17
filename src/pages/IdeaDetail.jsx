@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, ArrowUpRight, Award, BarChart3, BookOpen, Building2, CalendarDays, CheckCircle2, Clock3, Gauge, History, PauseCircle, ShieldAlert, Sparkles, Target, TrendingUp, UserRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Award, BarChart3, BellOff, BellPlus, BookOpen, Building2, CalendarDays, CheckCircle2, Clock3, Gauge, History, PauseCircle, ShieldAlert, Sparkles, Target, TrendingUp, UserRound } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import AuthorAttribution from "../components/AuthorAttribution";
 import CompanyMark from "../components/CompanyMark";
@@ -7,6 +7,7 @@ import DashboardHeader from "../components/DashboardHeader";
 import InsightDrawer from "../components/InsightDrawer";
 import KpiCard from "../components/KpiCard";
 import { useLanguage } from "../context/LanguageContext";
+import { useAuth } from "../context/AuthContext";
 import { dateTimeLabel, formatNumber, formatPercent } from "../lib/calculations";
 import { recommendationActionLabel, recommendationMetrics, recommendationStatusLabel, splitResearchPoints } from "../lib/recommendations";
 import { splitRecommendationUpdates } from "../lib/recommendationMedia";
@@ -14,6 +15,7 @@ import { supabase } from "../lib/supabase";
 
 export default function IdeaDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
   const { isArabic } = useLanguage();
   const locale = isArabic ? "ar-EG" : "en-GB";
   const BackIcon = isArabic ? ArrowRight : ArrowLeft;
@@ -25,6 +27,7 @@ export default function IdeaDetail() {
   const [author, setAuthor] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [following, setFollowing] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -49,6 +52,25 @@ export default function IdeaDetail() {
     };
     load();
   }, [id]);
+
+  useEffect(() => {
+    let active = true;
+    const loadFollow = async () => {
+      if (!user?.id || !id) return setFollowing(false);
+      const { data, error } = await supabase.from("user_follows").select("id").eq("user_id", user.id).eq("entity_type", "recommendation").eq("entity_id", id).maybeSingle();
+      if (active && !error) setFollowing(Boolean(data));
+    };
+    void loadFollow();
+    return () => { active = false; };
+  }, [user?.id, id]);
+
+  const toggleFollow = async () => {
+    const next = !following;
+    const { error } = await supabase.rpc("toggle_follow", { p_entity_type: "recommendation", p_entity_id: id, p_follow: next });
+    if (error) return setMessage(error.message);
+    setFollowing(next);
+    setMessage(next ? (isArabic ? "هيوصلك أي تحديث جديد خاص بهذه التوصية." : "You will now receive material updates for this recommendation.") : (isArabic ? "تم إيقاف متابعة التوصية." : "Recommendation follow removed."));
+  };
 
   const metrics = useMemo(() => item ? recommendationMetrics(item, prices) : null, [item, prices]);
 
@@ -80,7 +102,7 @@ export default function IdeaDetail() {
             <CompanyMark ticker={item.ticker} name={item.company_name} image={item.company_logo_url} size="xlarge"/>
             <div><div className="research-detail-status-row-v22"><span className={`action-pill-v23 ${action}`}>{recommendationActionLabel(action, isArabic)}</span><span className={`status-pill ${metrics.isOpen ? "live" : "final"}`}>{recommendationStatusLabel(item.status, isArabic)}</span><span>{item.sector || (isArabic ? "أسهم مصرية" : "Egyptian equities")}</span></div><h1>{item.company_name}</h1><p>{item.title}</p><div className="recommendation-meta-inline-v3"><span><CalendarDays size={15}/>{new Date(`${item.recommendation_date}T12:00:00`).toLocaleDateString(locale)}</span><span><Clock3 size={15}/>{metrics.durationDays} {isArabic ? "يوم" : "days"}</span><span><UserRound size={15}/>{analystName}</span></div></div>
           </div>
-          <div className="recommendation-hero-actions-v3"><InsightDrawer label={isArabic ? "اشرح التوصية" : "Explain this recommendation"} title={`${item.ticker} · ${isArabic ? "ملخص القرار" : "Decision brief"}`} summary={aiSummary}/><span className="last-update-chip-v3"><i/><small>{isArabic ? "آخر تحديث" : "LAST UPDATE"}</small><b>{dateTimeLabel(item.updated_at, locale)}</b></span></div>
+          <div className="recommendation-hero-actions-v3"><InsightDrawer label={isArabic ? "اشرح التوصية" : "Explain this recommendation"} title={`${item.ticker} · ${isArabic ? "ملخص القرار" : "Decision brief"}`} summary={aiSummary}/><button className={`button subtle follow-button-v312 ${following ? "active" : ""}`} onClick={toggleFollow}>{following ? <BellOff size={15}/> : <BellPlus size={15}/>} {following ? (isArabic ? "إلغاء المتابعة" : "Following") : (isArabic ? "تابع التوصية" : "Follow recommendation")}</button><span className="last-update-chip-v3"><i/><small>{isArabic ? "آخر تحديث" : "LAST UPDATE"}</small><b>{dateTimeLabel(item.updated_at, locale)}</b></span></div>
         </section>
 
         {stockImageUrl && <figure className="recommendation-stock-visual-v34"><img src={stockImageUrl} alt={`${item.company_name} ${item.ticker}`}/><figcaption><span>{isArabic ? "صورة التوصية / لقطة الشارت" : "Recommendation visual / chart snapshot"}</span><b>{item.ticker}</b></figcaption></figure>}

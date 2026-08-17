@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Activity, ArrowUpRight, Check, Clock3, Download, FileText, Link2, RefreshCw, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
+import { Activity, ArrowUpRight, BellOff, BellPlus, Check, Clock3, Download, FileText, Link2, RefreshCw, ShieldCheck, TrendingDown, TrendingUp } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { Link, useParams } from "react-router-dom";
@@ -59,7 +59,7 @@ async function loadPublishedData() {
 
 export default function MemberDashboard() {
   const reportRef = useRef(null);
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { slug } = useParams();
   const { t, isArabic } = useLanguage();
   const locale = isArabic ? "ar-EG" : "en-GB";
@@ -79,6 +79,7 @@ export default function MemberDashboard() {
   const [range, setRange] = useState("ALL");
   const [exporting, setExporting] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [followingPortfolio, setFollowingPortfolio] = useState(false);
 
   const refresh = async () => {
     try {
@@ -125,6 +126,17 @@ export default function MemberDashboard() {
   }, []);
 
   const currentPortfolio = portfolios.find((item) => item.id === selectedPortfolioId) || portfolios[0] || null;
+
+  useEffect(() => {
+    let active = true;
+    const loadFollow = async () => {
+      if (!user?.id || !currentPortfolio?.id) return setFollowingPortfolio(false);
+      const { data, error } = await supabase.from("user_follows").select("id").eq("user_id", user.id).eq("entity_type", "portfolio").eq("entity_id", currentPortfolio.id).maybeSingle();
+      if (active && !error) setFollowingPortfolio(Boolean(data));
+    };
+    void loadFollow();
+    return () => { active = false; };
+  }, [user?.id, currentPortfolio?.id]);
   const months = useMemo(() => allMonths.filter((month) => month.portfolio_id === currentPortfolio?.id), [allMonths, currentPortfolio?.id]);
   const selected = months.find((month) => month.month_key === selectedKey) || months.at(-1);
   const metrics = useMemo(() => calculateMonth(selected), [selected]);
@@ -156,6 +168,15 @@ export default function MemberDashboard() {
     setRange("ALL");
   };
 
+
+  const togglePortfolioFollow = async () => {
+    if (!currentPortfolio?.id) return;
+    const next = !followingPortfolio;
+    const { error } = await supabase.rpc("toggle_follow", { p_entity_type: "portfolio", p_entity_id: currentPortfolio.id, p_follow: next });
+    if (error) return setMessage(error.message);
+    setFollowingPortfolio(next);
+    setMessage(next ? (isArabic ? "هيوصلك الآن تحديثات هذه المحفظة فقط عند حدوث تغيير مهم." : "You are now following this portfolio. Material updates will reach your alerts.") : (isArabic ? "تم إيقاف متابعة المحفظة." : "Portfolio follow removed."));
+  };
 
   const copyDirectLink = async () => {
     if (!currentPortfolio?.slug) return;
@@ -240,6 +261,7 @@ export default function MemberDashboard() {
             </div>
             <div className="overview-actions-v3" data-html2canvas-ignore="true">
               <InsightDrawer label={isArabic ? "اشرح الأداء" : "Explain performance"} title={isArabic ? "ملخص أداء المحفظة" : "Portfolio performance brief"} summary={aiSummary}/>
+              <button className={`button subtle follow-button-v312 ${followingPortfolio ? "active" : ""}`} onClick={togglePortfolioFollow}>{followingPortfolio ? <BellOff size={15}/> : <BellPlus size={15}/>} {followingPortfolio ? (isArabic ? "إلغاء المتابعة" : "Following") : (isArabic ? "متابعة التحديثات" : "Follow updates")}</button>
               <button className="button subtle" onClick={copyDirectLink}><span className="copy-link-icon-v31">{linkCopied ? <Check size={15}/> : <Link2 size={15}/>}</span>{linkCopied ? (isArabic ? "تم النسخ" : "Copied") : (isArabic ? "نسخ الرابط المباشر" : "Copy direct link")}</button>
               {isSuperAdmin && <button className="button gold" onClick={exportPdf} disabled={exporting}><Download size={15}/>{exporting ? t("loading") : t("exportPdf")}</button>}
             </div>

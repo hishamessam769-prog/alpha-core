@@ -26,6 +26,7 @@ export default function DashboardHeader({ admin = false }) {
   const exploreLinks = [
     { to: "/advisor", label: isArabic ? "المستشار الذكي" : "Robo-Advisor", icon: BrainCircuit },
     { to: "/my-journal", label: isArabic ? "سجلي الشخصي" : "My Journal", icon: Activity },
+    { to: "/my-portfolios", label: isArabic ? "محافظي الافتراضية" : "My Virtual Portfolios", icon: WalletCards },
     { to: "/news", label: isArabic ? "الأخبار والتحليل" : "News & Analysis", icon: Newspaper },
     { to: "/weekly-reports", label: isArabic ? "تقارير الأبحاث" : "Research Reports", icon: BookOpen },
     { to: "/methodology", label: isArabic ? "المنهجية" : "Methodology", icon: BarChart3 },
@@ -34,7 +35,7 @@ export default function DashboardHeader({ admin = false }) {
   const managementLinks = [
     { to: "/admin/recommendations", label: isArabic ? "إدارة التوصيات" : "Manage recommendations", icon: Lightbulb, show: hasPermission(profile, "manage_recommendations") },
     { to: "/admin/weekly-reports", label: isArabic ? "إدارة التقارير" : "Manage research reports", icon: BookOpen, show: hasPermission(profile, "manage_reports") },
-    { to: "/admin/prices", label: isArabic ? "تحديث الأسعار" : "Price data", icon: FileSpreadsheet, show: hasAnyPermission(profile, ["manage_portfolios", "manage_recommendations"]) },
+    { to: profile?.is_super_admin ? "/admin/assets" : "/admin/prices", label: profile?.is_super_admin ? (isArabic ? "الأصول والأسعار الرئيسية" : "Master assets & prices") : (isArabic ? "تحديث الأسعار" : "Price data"), icon: FileSpreadsheet, show: hasAnyPermission(profile, ["manage_portfolios", "manage_recommendations"]) || profile?.is_super_admin },
     { to: "/admin/support", label: isArabic ? "صندوق الدعم" : "Support inbox", icon: Headphones, show: hasPermission(profile, "support_inbox") },
     { to: "/admin/notifications", label: isArabic ? "مركز الإشعارات" : "Notifications", icon: BellRing, show: profile?.is_super_admin },
     { to: "/admin/analytics", label: isArabic ? "تحليلات المستخدمين" : "Users & analytics", icon: Activity, show: profile?.is_super_admin },
@@ -65,7 +66,7 @@ export default function DashboardHeader({ admin = false }) {
 
         <div className="mobile-nav-actions">
           <div className="mobile-tools-row-v34"><ThemeToggle/><LanguageToggle compact/></div>
-          {!admin && <Link className="button subtle full" to="/my-journal" onClick={close}><Activity size={15}/>{isArabic ? "سجلي الشخصي" : "My Journal"}</Link>}
+          {!admin && <><Link className="button subtle full" to="/my-portfolios" onClick={close}><WalletCards size={15}/>{isArabic ? "محافظي الافتراضية" : "My Virtual Portfolios"}</Link><Link className="button subtle full" to="/my-journal" onClick={close}><Activity size={15}/>{isArabic ? "سجلي الشخصي" : "My Journal"}</Link></>}
           {!admin && creatorAccess && <Link className="button primary full" to="/admin/publishing" onClick={close}><PenSquare size={15}/>{isArabic ? "إنشاء ونشر" : "Create & publish"}</Link>}
           {adminAccess && !admin && <Link className="button subtle full" to={workspaceRoute(profile)} onClick={close}><Settings size={15}/>{isArabic ? "مساحة الإدارة" : "Admin workspace"}</Link>}
           <Link className="button subtle full" to="/profile" onClick={close}><UserRound size={15}/>{isArabic ? "الملف الشخصي" : "Profile"}</Link>
@@ -80,7 +81,7 @@ export default function DashboardHeader({ admin = false }) {
         <HeaderMenu label={profile?.full_name || profile?.email || (isArabic ? "حسابي" : "Account")} icon={UserRound} align="end" className="account-menu-v34">
           <div className="account-summary-v34"><span className="profile-avatar"><UserRound size={15}/></span><div><b>{profile?.full_name || profile?.email}</b><small>{roleLabel(profile).toUpperCase()}</small></div></div>
           <Link to="/profile"><UserRound size={15}/>{isArabic ? "الملف والإعدادات" : "Profile & settings"}</Link>
-          {!admin && <Link to="/my-journal"><Activity size={15}/>{isArabic ? "سجلي الشخصي" : "My Journal"}</Link>}
+          {!admin && <><Link to="/my-portfolios"><WalletCards size={15}/>{isArabic ? "محافظي الافتراضية" : "My Virtual Portfolios"}</Link><Link to="/my-journal"><Activity size={15}/>{isArabic ? "سجلي الشخصي" : "My Journal"}</Link></>}
           {creatorAccess && <Link to="/admin/publishing"><PenSquare size={15}/>{isArabic ? "استوديو النشر" : "Publishing studio"}</Link>}
           {adminAccess && !admin && <Link to={workspaceRoute(profile)}><Settings size={15}/>{isArabic ? "مساحة الإدارة" : "Admin workspace"}</Link>}
           {admin && <Link to="/dashboard"><LayoutDashboard size={15}/>{isArabic ? "عرض المنصة" : "Member view"}</Link>}

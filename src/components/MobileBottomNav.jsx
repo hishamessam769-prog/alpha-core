@@ -28,7 +28,7 @@ export default function MobileBottomNav() {
     items = [
       { to: workspaceRoute(profile), label: isArabic ? "الإدارة" : "Admin", icon: Settings, end: true },
       { to: creator ? "/admin/publishing" : "/dashboard", label: isArabic ? "النشر" : "Publish", icon: PenSquare },
-      { to: hasAnyPermission(profile, ["manage_portfolios", "manage_recommendations"]) ? "/admin/prices" : "/portfolios", label: isArabic ? "الأسعار" : "Prices", icon: WalletCards },
+      { to: profile?.is_super_admin ? "/admin/assets" : (hasAnyPermission(profile, ["manage_portfolios", "manage_recommendations"]) ? "/admin/prices" : "/portfolios"), label: isArabic ? "الأسعار" : "Prices", icon: WalletCards },
       { to: hasPermission(profile, "support_inbox") ? "/admin/support" : "/news", label: isArabic ? "الدعم" : "Support", icon: Headphones },
       { to: "/profile", label: isArabic ? "حسابي" : "Profile", icon: UserRound },
     ];
